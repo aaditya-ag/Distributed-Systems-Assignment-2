@@ -1,5 +1,11 @@
-env/*
-__pycache__/*
-migrations/*
-build/*
-dist/*
+env/
+
+__pycache__/
+
+
+migrations/
+
+
+build/
+dist/
+*.egg-info/
