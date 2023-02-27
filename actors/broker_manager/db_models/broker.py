@@ -1,7 +1,8 @@
 from src import db
 
+
 class BrokerModel(db.Model):
-    __tablename__ = 'broker'
+    __tablename__ = "broker"
 
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String, nullable=False)
@@ -10,7 +11,7 @@ class BrokerModel(db.Model):
     status = db.Column(db.Boolean, default=False, nullable=False)
 
     def as_dict(self):
-        return  {
+        return {
             "id": self.id,
             "ip": self.ip,
             "port": self.port,

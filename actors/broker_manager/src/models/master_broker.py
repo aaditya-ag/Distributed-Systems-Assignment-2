@@ -1,65 +1,157 @@
 import threading
 import random
-from broker import Broker
-from utils import TopicToLocationDict, Prounter
+from models import Broker
+from utils import Prounter, TopicToLocationDict
+
 
 class MasterBroker:
     def __init__(self):
         self.lock = threading.Lock()
         self.counter = Prounter()
-        self.brokers = {} # dict(broker_id => Broker())
-        self.topic_to_partitionBrokerDict = TopicToLocationDict() # dict(topic_name => dict(partition_id => broker_id))
+        self.brokers = {}  # dict(broker_id => Broker())
+        self.topic_to_location = TopicToLocationDict()
 
     def add_broker(self, ip, port):
+        """
+        Add a broker with an ip and port
+        id should be consistent with the database ids, hence uses Prounter
+
+        Params:
+        -----------------
+        ip: str
+        port: str
+
+        Returns:
+        -----------------
+        None
+        """
         # WAL Update
         self.lock.acquire()
         broker_id = self.counter.get_post_increment()
         self.brokers[broker_id] = Broker(broker_id, ip, port)
         self.lock.release()
-        #DB update
-     
+        # DB update
+
     def remove_broker(self, broker_id):
+        """
+        Remove a broker
+
+        Params:
+        -----------------
+        ip: str
+        port: str
+
+        Returns:
+        -----------------
+        None
+        """
         # WAL Update
         self.lock.acquire()
-        if broker_id in self.brokers:
-            del self.brokers[broker_id]
+        for topic_name, partition_id in self.brokers[broker_id].topic_partitions:
+            self.topic_to_location.remove(topic_name, partition_id)
+        del self.brokers[broker_id]
         self.lock.release()
-        #DB update
+        # DB update
 
     def get_broker(self, topic_name, partition_id):
-        broker_id = self.topic_to_partitionBrokerDict.get_broker_id(topic_name, partition_id)
+        """
+        Params:
+        -----------------
+        topic_name: str
+        partition_id: int
+
+        Returns:
+        -----------------
+        a Broker instance of the required broker
+        """
+        broker_id = self.topic_to_location.get_broker_id(topic_name, partition_id)
         return self.brokers[broker_id]
 
-    
+    def add_partitions(self, topic_name, partition_broker_list):
+        """
+        Params:
+        -----------------
+        topic_name: str
+        partition_broker_list: list([broker_id:int, partition_id:int])
+
+        Returns:
+        -----------------
+        None
+        """
+        for broker_id, partition_id in partition_broker_list:
+            self.topic_to_location.add(topic_name, broker_id, partition_id)
+            self.brokers[broker_id].add_partition(topic_name, partition_id)
+
     def assign_partition(self, topic_name):
-        partitionBroker_dict = self.topic_to_partitionBrokerDict.get(topic_name)
+        """
+        Selects a random partition assigned for this topic from a running broker
+
+        Params:
+        -----------------
+        topic_name: str
+
+        Returns:
+        -----------------
+        partition_id: int
+        """
+        location_dict = self.topic_to_location.get(topic_name)
         partition_ids = [
-            partition_id 
-            for partition_id, broker_id in partitionBroker_dict.items()
+            partition_id
+            for partition_id, broker_id in location_dict.items()
             if self.brokers[broker_id].is_alive()
         ]
         if len(partition_ids) == 0:
             return None
         return random.choice(partition_ids)
-    
 
     def get_least_loaded_brokers(self):
-        least_loaded_brokers = list(self.brokers.values()).sort(key=lambda broker:broker.num_partitions)[:3]
+        """
+        Sorts the brokers based on their number of partition present in them
+        Returns the 3 Least loaded broker instances
+
+        Params:
+        -----------------
+        None
+
+        Returns:
+        -----------------
+        List(Broker)[3]
+        """
+        least_loaded_brokers = list(
+            filter(lambda broker: broker.is_alive(), self.brokers.values())
+        ).sort(key=lambda broker: broker.get_number_of_partitions())[:3]
+
         return least_loaded_brokers
 
-    def add_partitions(self, topic_name, partition_broker_list):
+    def change_broker_live_status(self, broker_id, is_running):
         """
-        Params: topic_name, list([broker_id, partition_id])
-        """
-        for broker_id, partition_id in partition_broker_list:
-            self.topic_to_partitionBrokerDict.add(topic_name, broker_id, partition_id)
-            self.brokers[broker_id].increase_partition()
+        Changes status of broker assigned for this topic and partition
 
-    def change_broker_live_status(self, broker_id, current_status):
-        self.brokers[broker_id].update_running_status(current_status)
+        Params:
+        -----------------
+        broker_id: int
+        is_running: boolean
+
+        Returns:
+        -----------------
+        None
+        """
+        self.brokers[broker_id].update_running_status(is_running)
 
     def is_alive(self, topic_name, partiton_id):
+        """
+        Checks if broker assigned for this topic and partition is alive or not
+
+        Params:
+        -----------------
+        topic_name: str
+        partiton_id: int
+
+        Returns:
+        -----------------
+        Boolean
+        """
         return self.get_broker(topic_name, partiton_id).is_alive()
-    
+
     def __str__(self):
         return f"MasterBroker containing {len(self.brokers)} Brokers"

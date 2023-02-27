@@ -1,7 +1,10 @@
 from src import db
 from db_models.topic import TopicModel
 
+
 class ProducerModel(db.Model):
+    __tablename__ = "producer"
+
     # A Producer must have an id
     producer_id = db.Column(db.Integer, primary_key=True)
 
@@ -9,7 +12,4 @@ class ProducerModel(db.Model):
     topic = db.Column(db.Integer, db.ForeignKey(TopicModel.name))
 
     def as_dict(self):
-        return  {
-            "producer_id": self.producer_id,
-            "topic_id": self.topic_id
-        }
+        return {"producer_id": self.producer_id, "topic_id": self.topic_id}
