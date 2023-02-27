@@ -16,6 +16,13 @@ class ConsumerMetaData:
             self.dict[consumer_id] = 0
         return consumer_id
     
+    def contains(self, consumer_id):
+        with self.lock:
+            if consumer_id in self.dict:
+                return True
+            else:
+                return False
+    
     def get(self, consumer_id):
         with self.lock:
             return self.dict[consumer_id]
