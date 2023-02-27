@@ -1,5 +1,5 @@
 import threading
-class prounter:
+class Prounter:
     def __init__(self, init_value: int= 0) -> None:
         self.value: int = init_value
         self.lock = threading.Lock()
