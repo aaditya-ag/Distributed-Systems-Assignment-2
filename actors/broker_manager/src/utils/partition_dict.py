@@ -11,12 +11,14 @@ class PartitionDict:
         self.dict = {}
     
     def add(self, partition_id, broker_id):
-        with self.lock:
-            self.dict[partition_id] = broker_id
+        self.lock.acquire()
+        self.dict[partition_id] = broker_id
+        self.lock.release()
     
     def get(self, partition_id):
         return self.dict[partition_id]
 
     def update(self, partition_id, broker_id):
-        with self.lock:
-            self.dict[partition_id] = broker_id
+        self.lock.acquire()
+        self.dict[partition_id] = broker_id
+        self.lock.release()

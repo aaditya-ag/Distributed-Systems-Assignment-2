@@ -10,14 +10,16 @@ class ProducerMetadata:
         self.set = set()
 
     def create(self):
-        with self.lock:
-            producer_id = len(self.set)
-            self.set.add(producer_id)
+        self.lock.acquire()
+        producer_id = len(self.set)
+        self.set.add(producer_id)
+        self.lock.release()
         return producer_id
     
     def contains(self, producer_id):
-        with self.lock:
-            if producer_id in self.set:
-                return True
-            else:
-                return False
+        self.lock.acquire()
+        verdict = False
+        if producer_id in self.set:
+            verdict = True
+        self.lock.release()
+        return verdict

@@ -10,16 +10,18 @@ class LogMetadataQueue:
         self.queue = []
 
     def add(self, partition_id):
-        with self.lock:
-            index = len(self.queue)
-            self.queue.append(partition_id)
+        self.lock.acquire()
+        index = len(self.queue)
+        self.queue.append(partition_id)
+        self.lock.release()
         return index
     
     def get(self, index):
         return self.queue[index]
     
     def size(self):
-        with self.lock:
-            size = len(self.queue)
+        self.lock.acquire()
+        size = len(self.queue)
+        self.lock.release()
         return size
 
