@@ -13,6 +13,7 @@ db = SQLAlchemy(app)
 
 from db_models import *
 
+master_queue = None # MasterQueue() # instantiate master queue
 
 def health_checker():
     while True:
