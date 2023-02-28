@@ -9,7 +9,7 @@ class ConsumerModel(db.Model):
     consumer_id = db.Column(db.Integer, primary_key=True)
 
     # We need a topic for which the consumer registers
-    topic = db.Column(db.Integer, db.ForeignKey(TopicModel.name))
+    topic = db.Column(db.String, db.ForeignKey(TopicModel.name))
 
     # Maintain an index upto which the consumer has read the messages
     idx_read_upto = db.Column(db.Integer, default=0)
