@@ -1,3 +1,5 @@
 # This folder contains implementations of our in-memory components
-from broker import *
-from master_broker import *
+from src.models.broker import Broker
+from src.models.master_broker import MasterBroker
+from src.models.topic import Topic
+from src.models.master_queue import MasterQueue

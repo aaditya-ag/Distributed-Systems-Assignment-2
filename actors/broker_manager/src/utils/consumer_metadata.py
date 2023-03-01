@@ -10,6 +10,11 @@ class ConsumerMetaData:
         self.lock = threading.Lock()
         self.dict = {}
 
+    def add(self, consumer_id, idx_read_upto):
+        self.lock.acquire()
+        self.dict[consumer_id] = idx_read_upto
+        self.lock.release()
+
     def create(self):
         self.lock.acquire()
         consumer_id = len(self.dict)

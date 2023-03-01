@@ -12,13 +12,17 @@ app.config[
 db = SQLAlchemy(app)
 
 from db_models import *
+from src.models import MasterQueue
 
-master_queue = None # MasterQueue() # instantiate master queue
+master_queue = MasterQueue()
+
+# This needs to imported, otherwise the api endpoints from views aren't integrated. 
+from src import views
 
 def health_checker():
     while True:
         try:
-            response = requests.get("http://127.0.0.1:8000/")
+            response = requests.get("http://127.0.0.1:5000/")
             if response.status_code != 200:
                 print("Not Responding...")
             else:
@@ -28,11 +32,13 @@ def health_checker():
             # print(f"ERROR: {str(e)}")
             pass
 
-        sleep(2)
+        sleep(20)
 
 
 with app.app_context():
+    db.drop_all()
     db.create_all()
+    master_queue.fetch_from_db()
 
     print("Starting health check threaad")
     health_check_daemon = threading.Thread(
@@ -42,3 +48,4 @@ with app.app_context():
     )
 
     health_check_daemon.start()
+

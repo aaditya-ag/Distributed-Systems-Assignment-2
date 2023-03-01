@@ -16,6 +16,11 @@ class ProducerMetadata:
         self.lock.release()
         return producer_id
     
+    def add(self, producer_id):
+        self.lock.acquire()
+        self.set.add(producer_id)
+        self.lock.release()
+    
     def contains(self, producer_id):
         self.lock.acquire()
         verdict = False

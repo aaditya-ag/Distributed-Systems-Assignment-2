@@ -1,4 +1,4 @@
-from utils import (
+from src.utils import (
     ConsumerMetaData,
     LogMetadataQueue,
     # PartitionDict,
@@ -19,9 +19,15 @@ class Topic:
         consumer_id = self.consumers.create()
         return consumer_id
     
+    def add_consumer(self, consumer_id, idx_read_upto):
+        self.consumers.add(consumer_id, idx_read_upto)
+    
     def register_producer(self):
         producer_id = self.producers.create()
         return producer_id
+    
+    def add_producer(self, producer_id):
+        self.producers.add(producer_id)
     
     def get_message_index(self, consumer_id):
         """
@@ -49,3 +55,11 @@ class Topic:
             return -1
         index = self.logs.add(partition_id)
         return index
+    
+    def count_unread_messages(self, consumer_id):
+        if not self.consumers.contains(consumer_id):
+            return -1
+        num_read_message = self.get_message_index(consumer_id)
+        with self.lock:
+            num_unread_message = len(self.logs) - num_read_message
+        return num_unread_message
