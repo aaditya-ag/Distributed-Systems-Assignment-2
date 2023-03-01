@@ -6,11 +6,14 @@ from time import sleep
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:admin@localhost:5432/distributed_queue"
+app.config[
+    "SQLALCHEMY_DATABASE_URI"
+] = "postgresql://postgres:admin@localhost:5432/distributed_queue"
 db = SQLAlchemy(app)
 
 from db_models import *
 
+master_queue = None # MasterQueue() # instantiate master queue
 
 def health_checker():
     while True:
@@ -24,12 +27,11 @@ def health_checker():
             print("Not Responding...")
             # print(f"ERROR: {str(e)}")
             pass
-        
+
         sleep(2)
 
 
 with app.app_context():
-
     db.create_all()
 
     print("Starting health check threaad")
@@ -40,4 +42,3 @@ with app.app_context():
     )
 
     health_check_daemon.start()
-

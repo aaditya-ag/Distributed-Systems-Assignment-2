@@ -1,3 +1,5 @@
+from partition_to_broker_dict import *
+from topic_to_location_dict import *
 from consumer_metadata import ConsumerMetaData
 from log_metadata_queue import LogMetadataQueue
 from partition_dict import PartitionDict

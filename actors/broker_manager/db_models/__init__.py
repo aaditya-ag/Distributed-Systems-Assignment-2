@@ -1,4 +1,10 @@
 # This folder contains definitions of DB tables.
+from db_models.topic import TopicModel
+from db_models.broker import BrokerModel
+from db_models.consumer import ConsumerModel
+from db_models.producer import ProducerModel
+from db_models.tpl_map import TPLMapModel
+from db_models.tpb_map import TPBMapModel
 
 """
 Database
@@ -7,7 +13,7 @@ Database
 - consumer
 - producer
 - topic_partition_broker mapping
-- topic-partition-id_2_message
+- topic-partition_message mapping
 - broker to IP,PORT mappings
 """
 
@@ -17,6 +23,7 @@ In memory
 Metadata- 
 - MasterBroker (dict)
     - dict(broker_id => brokers) # global_lock
+    - dict((topic, partition) => broker_id)
 
     + add_brokers() 
         --> WAL update, acquire global_lock, update data structures, release lock, update DB
@@ -26,6 +33,11 @@ Metadata-
 
     + get_least_loaded_brokers()
         --> return [3 brokers]
+
+    + get_broker(partition, topic)
+
+    + add_topic(topic_name, list(broker_id, partition_id))
+    
 
 
 - Topic 
@@ -83,6 +95,7 @@ Broker
     - Status bit
     - ip
     - port
-    - num_partitions
+    - set(topic,partition)
+    # - num_partitions
     - lock
 """
