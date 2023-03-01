@@ -1,11 +1,13 @@
 from flask_restful import Resource, Api, reqparse
 from src import (
     app,
-    db,
     master_queue
 )
 
+
 from db_models import *
+
+from src.http_status_codes import *
 
 api = Api(app)
 
@@ -18,12 +20,12 @@ class TopicAPI(Resource):
             return {
                 "status": "Failure",
                 "message": "Topic already exists"
-            }, 400
+            }, HTTP_400_BAD_REQUEST
         
         master_queue.add_topic(args["topic_name"])
         return {
             "status": "Success"
-        }, 200
+        }, HTTP_201_CREATED
     
 
 class ProducerAPI(Resource):
@@ -36,7 +38,7 @@ class ProducerAPI(Resource):
         return {
             "status": "Success",
             "producer_id": producer_id
-        }, 200
+        }, HTTP_201_CREATED
     
 class ConsumerAPI(Resource):
     def post(self):
@@ -49,12 +51,12 @@ class ConsumerAPI(Resource):
             return {
                 "status": "Failure",
                 "message": "The topic does not exist"
-            }, 400
+            }, HTTP_400_BAD_REQUEST
         else:
             return {
                 "status": "Success",
                 "consumer_id": consumer_id
-            }, 200
+            }, HTTP_201_CREATED
     
 class MessageAPI(Resource):
     def get(self):
@@ -63,17 +65,17 @@ class MessageAPI(Resource):
         parser.add_argument("topic_name", required=True, help="Topic name required")
         args = parser.parse_args()
         
-        message = master_queue.get_message(args["topic_name"], args["consumer_id"])
+        message = master_queue.dequeue(args["topic_name"], args["consumer_id"])
         if message is None:
             return {
                 "status": "Failure",
                 "message": "Unable to fetch message due to no more messages or broker is down"
-            }, 400
+            }, HTTP_400_BAD_REQUEST
         else:
             return {
                 "status": "Success",
                 "message": message
-            }, 200     
+            }, HTTP_200_OK     
 
     def post(self):
         parser = reqparse.RequestParser()
@@ -83,15 +85,15 @@ class MessageAPI(Resource):
         parser.add_argument("partition_id")
         args = parser.parse_args()
         
-        if master_queue.add_message(args["topic_name"], args["producer_id"], args["message"], args.get("partition_id")):
+        if master_queue.enqueue(args["topic_name"], args["producer_id"], args["message"], args.get("partition_id")):
             return {
                 "status": "Success"
-            }, 200
+            }, HTTP_201_CREATED
         else:
             return {
                 "status": "Failure",
                 "message": "Unable to add message due to invalid producer id or broker is down"
-            }, 400  
+            }, HTTP_400_BAD_REQUEST  
 
 class MessageSizeAPI(Resource):
     def get(self):
@@ -100,17 +102,17 @@ class MessageSizeAPI(Resource):
         parser.add_argument("consumer_id", required=True, help="Consumer id required")
         args = parser.parse_args()
         
-        message_size = master_queue.find_size(args["topic_name"], args["consumer_id"])
+        message_size = master_queue.count_unread_messages(args["topic_name"], args["consumer_id"])
         if message_size is None:
             return {
                 "status": "Failure",
                 "message": "Unable to fetch message size due to invalid input"
-            }, 400
+            }, HTTP_400_BAD_REQUEST
         else:
             return {
                 "status": "Success",
                 "message_size": message_size
-            }, 200
+            }, HTTP_200_OK
 
 class BrokerAPI(Resource):
     def post(self):
@@ -122,4 +124,17 @@ class BrokerAPI(Resource):
         master_queue.add_broker(args["broker_ip"], args["broker_port"])
         return {
             "status": "Success"
-        }, 200
+        }, HTTP_201_CREATED
+
+
+api.add_resource(TopicAPI, "/topics")
+api.add_resource(ProducerAPI, "/producers")
+api.add_resource(ConsumerAPI, "/consumers")
+api.add_resource(MessageAPI, "/messages")
+api.add_resource(MessageSizeAPI, "/unread_messages")
+api.add_resource(BrokerAPI, "/brokers")
+
+
+
+
+

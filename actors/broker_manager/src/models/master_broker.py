@@ -1,8 +1,15 @@
 import threading
 import random
-from models import Broker
-from utils import Prounter, TopicToLocationDict
+from src.models import Broker
+from src.utils import Prounter, TopicToLocationDict
 
+from db_models import (
+    BrokerModel,
+    TPBMapModel,
+    TopicModel
+)
+
+from src import db
 
 class MasterBroker:
     def __init__(self):
@@ -11,7 +18,19 @@ class MasterBroker:
         self.brokers = {}  # dict(broker_id => Broker())
         self.topic_to_location = TopicToLocationDict()
 
-    def add_broker(self, ip, port):
+    def fetch_from_db(self):
+        self.lock.acquire()
+        brokers = BrokerModel.query.order_by(BrokerModel.id).all()
+        for broker in brokers:
+            self.add_broker(ip=broker.ip, port=broker.port, is_running=broker.is_running)
+
+        tpb_entries = TPBMapModel.query.all()
+        for tpb_entry in tpb_entries:
+            self.add_partitions(tpb_entry.topic_name, [tpb_entry.broker_id, tpb_entry.partition_id])
+
+        self.lock.release()
+
+    def add_broker(self, ip, port, is_running=True):
         """
         Add a broker with an ip and port
         id should be consistent with the database ids, hence uses Prounter
@@ -28,9 +47,23 @@ class MasterBroker:
         # WAL Update
         self.lock.acquire()
         broker_id = self.counter.get_post_increment()
-        self.brokers[broker_id] = Broker(broker_id, ip, port)
+        self.brokers[broker_id] = Broker(
+            id=broker_id, 
+            ip=ip, 
+            port=port, 
+            is_running=is_running
+        )
         self.lock.release()
+        
         # DB update
+        broker = BrokerModel(
+            id=broker_id,
+            ip=ip,
+            port=port,
+        )
+        db.session.add(broker)
+        db.session.commit()
+
 
     def remove_broker(self, broker_id):
         """
@@ -51,7 +84,10 @@ class MasterBroker:
             self.topic_to_location.remove(topic_name, partition_id)
         del self.brokers[broker_id]
         self.lock.release()
+        
         # DB update
+        BrokerModel.query.filter_by(id=broker_id).delete()
+        db.session.commit()
 
     def get_broker(self, topic_name, partition_id):
         """
@@ -78,9 +114,10 @@ class MasterBroker:
         -----------------
         None
         """
-        for broker_id, partition_id in partition_broker_list:
+        for [broker_id, partition_id] in partition_broker_list:
             self.topic_to_location.add(topic_name, broker_id, partition_id)
             self.brokers[broker_id].add_partition(topic_name, partition_id)
+        
 
     def assign_partition(self, topic_name):
         """
@@ -117,11 +154,9 @@ class MasterBroker:
         -----------------
         List(Broker)[3]
         """
-        least_loaded_brokers = list(
-            filter(lambda broker: broker.is_alive(), self.brokers.values())
-        ).sort(key=lambda broker: broker.get_number_of_partitions())[:3]
-
-        return least_loaded_brokers
+        least_loaded_brokers = [broker for broker in self.brokers.values()  if broker.is_alive()]
+        least_loaded_brokers.sort(key=lambda broker: broker.get_number_of_partitions())
+        return [broker.id for broker in least_loaded_brokers[:3]]
 
     def change_broker_live_status(self, broker_id, is_running):
         """
@@ -137,6 +172,7 @@ class MasterBroker:
         None
         """
         self.brokers[broker_id].update_running_status(is_running)
+
 
     def is_alive(self, topic_name, partiton_id):
         """

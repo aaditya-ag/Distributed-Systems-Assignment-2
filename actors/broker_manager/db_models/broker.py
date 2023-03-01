@@ -7,14 +7,12 @@ class BrokerModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String, nullable=False)
     port = db.Column(db.String, nullable=False)
-    num_partitions = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.Boolean, default=False, nullable=False)
+    is_running = db.Column(db.Boolean, default=True, nullable=False)
 
     def as_dict(self):
         return {
             "id": self.id,
             "ip": self.ip,
             "port": self.port,
-            "num_partitions": self.num_partitions,
-            "status": self.status,
+            "is_running": self.is_running,
         }

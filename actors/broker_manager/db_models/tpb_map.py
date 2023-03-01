@@ -2,7 +2,7 @@ from src import db
 from db_models import TopicModel
 
 
-class TPBMapModel:
+class TPBMapModel(db.Model):
     """
     Stores entries as mapping of {Topic(T)--PartitionID(P)--BrokerID(B)}
     """

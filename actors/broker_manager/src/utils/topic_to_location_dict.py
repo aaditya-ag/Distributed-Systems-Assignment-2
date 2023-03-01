@@ -1,5 +1,5 @@
 import threading
-from utils import PartitionToBrokerDict
+from src.utils import PartitionToBrokerDict
 
 
 class TopicToLocationDict:

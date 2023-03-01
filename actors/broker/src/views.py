@@ -7,6 +7,8 @@ from src import (
 )
 from db_models import *
 
+from src.http_status_codes import *
+
 api = Api(app)
 
 
@@ -14,7 +16,7 @@ class Heartbeat(Resource):
     def get(self):
         return {
             "status": "Success",
-        }, 200
+        }, HTTP_200_OK
 
 
 class Logs(Resource):
@@ -37,12 +39,12 @@ class Logs(Resource):
         if log is None:
             return {
                 "status": "Failure"
-            }, 400
+            }, HTTP_400_BAD_REQUEST
         else:
             return {
                 "status": "Success",
                 "log": log.log_message
-            }, 200
+            }, HTTP_200_OK
 
     def post(self):
         parser = reqparse.RequestParser()
@@ -68,7 +70,7 @@ class Logs(Resource):
         return {
                 "status": "Success",
                 "message": "Message Successfully created"
-            }, 201 
+            }, HTTP_201_CREATED 
 
 
 api.add_resource(Heartbeat, "/")
