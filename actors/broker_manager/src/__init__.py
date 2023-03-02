@@ -20,6 +20,7 @@ master_queue = MasterQueue()
 from src import views
 
 def health_checker():
+    print("Starting health check thread")
     while True:
         try:
             response = requests.get("http://127.0.0.1:5000/")
@@ -32,7 +33,7 @@ def health_checker():
             # print(f"ERROR: {str(e)}")
             pass
 
-        sleep(20)
+        sleep(10)
 
 
 with app.app_context():
@@ -40,7 +41,7 @@ with app.app_context():
     db.create_all()
     master_queue.fetch_from_db()
 
-    print("Starting health check threaad")
+
     health_check_daemon = threading.Thread(
         target=health_checker,
         args=(),
@@ -48,4 +49,3 @@ with app.app_context():
     )
 
     health_check_daemon.start()
-

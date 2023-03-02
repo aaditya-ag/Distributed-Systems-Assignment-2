@@ -2,6 +2,7 @@ import threading
 import random
 from src.models import Broker
 from src.utils import Prounter, TopicToLocationDict
+from sqlalchemy import func 
 
 from db_models import (
     BrokerModel,
@@ -20,6 +21,10 @@ class MasterBroker:
 
     def fetch_from_db(self):
         self.lock.acquire()
+        
+        if BrokerModel.query.first() is not None:
+            self.counter.set(db.session.query(func.max(BrokerModel.id)).scalar())
+
         brokers = BrokerModel.query.order_by(BrokerModel.id).all()
         for broker in brokers:
             self.add_broker(ip=broker.ip, port=broker.port, is_running=broker.is_running)
@@ -45,6 +50,11 @@ class MasterBroker:
         None
         """
         # WAL Update
+
+        if BrokerModel.query.filter_by(ip=ip, port=port).first() is not None:
+            print("WARNING: Attempted to add the same broker twice. Ignoring...")
+            return
+        
         self.lock.acquire()
         broker_id = self.counter.get_post_increment()
         self.brokers[broker_id] = Broker(
