@@ -14,6 +14,7 @@ class ProducerMetadata:
         producer_id = len(self.set)
         self.set.add(producer_id)
         self.lock.release()
+        print(f"Producer metadata: {self.set}")
         return producer_id
     
     def add(self, producer_id):
@@ -27,4 +28,7 @@ class ProducerMetadata:
         if producer_id in self.set:
             verdict = True
         self.lock.release()
+        print(f"Producer Metadata set: {self.set}")
+        print(f"Producer Metadata producer_id: {type(producer_id)}")
+        print(f"Producer Metadata verdict: {verdict}")
         return verdict

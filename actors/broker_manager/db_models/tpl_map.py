@@ -9,8 +9,12 @@ class TPLMapModel(db.Model):
 
     __tablename__ = "tpl_map"
 
-    id = db.Column(db.Integer, primary_key=True)
-    topic_name = db.Column(db.String, db.ForeignKey(TopicModel.name))
-    producer_id = db.Column(db.Integer, db.ForeignKey(ProducerModel.producer_id))
+    topic_name = db.Column(db.String, primary_key=True)
+    producer_id = db.Column(db.Integer)
     partition_id = db.Column(db.Integer, nullable=False)
-    log_index = db.Column(db.Integer, nullable=False)
+    log_index = db.Column(db.Integer, primary_key = True)
+
+    __table_args__ = (
+        db.UniqueConstraint("topic_name", "log_index", name="log_id_constraint"),
+        db.ForeignKeyConstraint(["topic_name", "producer_id"], [ProducerModel.topic, ProducerModel.producer_id])
+    )
