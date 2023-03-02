@@ -106,7 +106,7 @@ class MasterQueue:
     def enqueue(self, topic_name, producer_id, message, partition_id = None):
         # WAL update
         if(not self.has_topic(topic_name)):
-            raise Exception("ERROR: topic does not exists.")
+            return False
         
         # get broker, partition from master_broker
         broker:Broker = None
@@ -164,10 +164,12 @@ class MasterQueue:
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
             return None
+        
         # get partition from the in-memory structure
-        index, partition_id = self.topics[topic_name].get_message_index(consumer_id)
+        index, partition_id = self.topics[topic_name].get_and_update_message_index(consumer_id)
         if(index < 0):
             # raise Exception("ERROR: consumer read error")
+            print("Indexerror")
             return None
 
         # get broker for the partition returned, 
@@ -178,6 +180,7 @@ class MasterQueue:
         broker:Broker = self.master_broker.get_broker(topic_name, partition_id)
 
         if not broker.is_alive():
+            print("Broker down")
             return None
         
         # send request to broker
@@ -191,13 +194,18 @@ class MasterQueue:
             }
         )
 
+        print(response.status_code)
+
         if response.status_code != HTTP_200_OK:
             return None
         
         log_message = response.json().get("log")
 
+        print(log_message)
+        
         # DB update
-        ConsumerModel.query.filter_by(consumer_id=consumer_id).update(idx_read_upto=index)
+        consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
+        consumer.idx_read_upto = index
         db.session.commit()
 
         return log_message
@@ -218,5 +226,6 @@ class MasterQueue:
             return (str in self.topics.keys())
 
     def do_partition(self, broker_ids, num_partitions=3):
+
         return [[broker_ids[i%len(broker_ids)], i] for i in range(0, num_partitions)]
 

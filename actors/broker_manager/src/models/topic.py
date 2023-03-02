@@ -24,10 +24,26 @@ class Topic:
     
     def register_producer(self):
         producer_id = self.producers.create()
+        print(f"Registered Producer: {producer_id}")
         return producer_id
     
     def add_producer(self, producer_id):
         self.producers.add(producer_id)
+    
+    def get_and_update_message_index(self, consumer_id):
+        """
+            Given a consumer id, the function returns the tuple (index, partition_id)
+            if the log and consumer_id exists, otherwise it returns (-1, -1).
+        """
+        if not self.consumers.contains(consumer_id):
+            return (-1, -1)
+        log_size = self.logs.size()
+        index = self.consumers.get_and_update(consumer_id, log_size)
+        if index == log_size:
+            return (-1, -1)
+        partition_id = self.logs.get(index)
+
+        return (index, partition_id)
     
     def get_message_index(self, consumer_id):
         """
@@ -37,7 +53,7 @@ class Topic:
         if not self.consumers.contains(consumer_id):
             return (-1, -1)
         log_size = self.logs.size()
-        index = self.consumers.read_and_update(consumer_id, log_size)
+        index = self.consumers.get(consumer_id)
         if index == log_size:
             return (-1, -1)
         partition_id = self.logs.get(index)
@@ -51,15 +67,19 @@ class Topic:
 
             Returns -1 if producer doesn't exist.
         """
-        if not self.producers.contains(producer_id):
+        if self.producers.contains(producer_id) == False:
             return -1
         index = self.logs.add(partition_id)
+        print(f"Topic Model, add_message_index(): {index}")
         return index
     
     def count_unread_messages(self, consumer_id):
         if not self.consumers.contains(consumer_id):
             return -1
         num_read_message = self.get_message_index(consumer_id)
-        with self.lock:
-            num_unread_message = len(self.logs) - num_read_message
+
+        if num_read_message[0] == -1:
+            return 0
+
+        num_unread_message = self.logs.size() - num_read_message[0]
         return num_unread_message

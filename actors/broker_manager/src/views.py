@@ -61,7 +61,7 @@ class ConsumerAPI(Resource):
 class MessageAPI(Resource):
     def get(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("consumer_id", required=True, help="Consumer id required")
+        parser.add_argument("consumer_id", type=int, required=True, help="Consumer id required")
         parser.add_argument("topic_name", required=True, help="Topic name required")
         args = parser.parse_args()
         
@@ -79,10 +79,10 @@ class MessageAPI(Resource):
 
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("producer_id", required=True, help="Producer id required")
+        parser.add_argument("producer_id", type=int, required=True, help="Producer id required")
         parser.add_argument("topic_name", required=True, help="Topic name required")
         parser.add_argument("message", required=True, help="Message required")
-        parser.add_argument("partition_id")
+        parser.add_argument("partition_id", type=int)
         args = parser.parse_args()
         
         if master_queue.enqueue(args["topic_name"], args["producer_id"], args["message"], args.get("partition_id")):
@@ -99,7 +99,7 @@ class MessageSizeAPI(Resource):
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument("topic_name", required=True, help="Topic name required")
-        parser.add_argument("consumer_id", required=True, help="Consumer id required")
+        parser.add_argument("consumer_id", type=int, required=True, help="Consumer id required")
         args = parser.parse_args()
         
         message_size = master_queue.count_unread_messages(args["topic_name"], args["consumer_id"])

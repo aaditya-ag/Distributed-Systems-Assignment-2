@@ -36,9 +36,10 @@ class ConsumerMetaData:
         self.lock.release()
         return index
         
-    def read_and_update(self, consumer_id, limit):
+    def get_and_update(self, consumer_id, limit):
         self.lock.acquire()
         index_read_upto = self.dict[consumer_id]
+        print(f"idx_read_upto={index_read_upto}")
         if self.dict[consumer_id] < limit:
             self.dict[consumer_id] += 1
         self.lock.release()
