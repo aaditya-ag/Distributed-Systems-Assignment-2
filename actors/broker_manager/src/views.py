@@ -34,10 +34,11 @@ class ProducerAPI(Resource):
         parser.add_argument("topic_name", required=True, help="Topic name required")
         args = parser.parse_args()
         
-        producer_id = master_queue.add_producer(args["topic_name"])
+        producer_id, topic_locations = master_queue.add_producer(args["topic_name"])
         return {
             "status": "Success",
-            "producer_id": producer_id
+            "producer_id": producer_id,
+            "topic_locations": topic_locations,
         }, HTTP_201_CREATED
     
 class ConsumerAPI(Resource):
@@ -127,14 +128,18 @@ class BrokerAPI(Resource):
         }, HTTP_201_CREATED
 
 
+# class ReplicateAPI(Resource):
+#     def get(self):
+#         parser = reqparse.RequestParser()
+#         parser.add_argument("datetime", required=True, help="DateTime required")
+#         args = parser.parse_args()
+
+
+
 api.add_resource(TopicAPI, "/topics")
 api.add_resource(ProducerAPI, "/producers")
 api.add_resource(ConsumerAPI, "/consumers")
 api.add_resource(MessageAPI, "/messages")
 api.add_resource(MessageSizeAPI, "/unread_messages")
 api.add_resource(BrokerAPI, "/brokers")
-
-
-
-
-
+# api.add_resource(ReplicateAPI, "/sync")

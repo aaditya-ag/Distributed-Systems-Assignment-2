@@ -1,6 +1,7 @@
 import threading
 import requests
 from src import db
+from datetime import datetime
 
 from src.models import (
     Topic,
@@ -22,6 +23,7 @@ class MasterQueue:
         self.lock = threading.Lock()
         self.topics = {} # dict[topic_name: Topic] : Topic class object representing the topic
         self.master_broker = MasterBroker()
+        self.last_updated_at = datetime.min
 
     def fetch_from_db(self):
         self.lock.acquire()
@@ -43,6 +45,29 @@ class MasterQueue:
         for log in logs:
             self.topics[log.topic_name].add_message_index(log.partition_id, log.producer_id)
             
+        self.lock.release()
+
+    def update_from_db(self):
+        self.lock.acquire()
+
+        self.master_broker.update_from_db(last_updated_at=self.last_updated_at)
+        topics = TopicModel.query.filter(TopicModel.updated_at > self.last_updated_at).all()
+        for topic in topics:
+            self.topics[topic.name] = Topic(topic.name)
+
+        consumers = ConsumerModel.query.filter(ConsumerModel.updated_at > self.last_updated_at).all()
+        for consumer in consumers:
+            self.topics[consumer.topic].add_consumer(consumer.consumer_id, consumer.idx_read_upto)
+        
+        producers = ProducerModel.query.filter(ProducerModel.updated_at > self.last_updated_at).all()
+        for producer in producers:
+            self.topics[producer.topic].add_producer(producer.producer_id)
+        
+        logs = TPLMapModel.query.filter(TPLMapModel.updated_at > self.last_updated_at).order_by(TPLMapModel.log_index).all()
+        for log in logs:
+            self.topics[log.topic_name].add_message_index(log.partition_id, log.producer_id)
+
+        self.last_updated_at = datetime.now()
         self.lock.release()
 
     def add_broker(self, ip, port):
@@ -77,7 +102,8 @@ class MasterQueue:
             self.add_topic(topic_name)
             
         producer_id = self.topics[topic_name].register_producer()
-        
+        topic_locations = self.master_broker.get_locations_for_topic(topic_name)
+
         # DB update
         producer = ProducerModel(
             producer_id=producer_id,
@@ -85,7 +111,7 @@ class MasterQueue:
         )
         db.session.add(producer)
         db.session.commit()
-        return producer_id
+        return producer_id, topic_locations
 
     def add_consumer(self, topic_name):
         # WAL update

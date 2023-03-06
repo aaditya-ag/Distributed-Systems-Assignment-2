@@ -2,6 +2,8 @@ import threading
 import random
 from src.models import Broker
 from src.utils import Prounter, TopicToLocationDict
+from datetime import datetime
+from sqlalchemy import func 
 
 from db_models import (
     BrokerModel,
@@ -20,6 +22,10 @@ class MasterBroker:
 
     def fetch_from_db(self):
         self.lock.acquire()
+
+        if BrokerModel.query.first() is not None:
+            self.counter.set(db.session.query(func.max(BrokerModel.id)).scalar())
+
         brokers = BrokerModel.query.order_by(BrokerModel.id).all()
         for broker in brokers:
             self.add_broker(ip=broker.ip, port=broker.port, is_running=broker.is_running)
@@ -29,6 +35,19 @@ class MasterBroker:
             self.add_partitions(tpb_entry.topic_name, [tpb_entry.broker_id, tpb_entry.partition_id])
 
         self.lock.release()
+
+    def update_from_db(self, last_updated_at):
+        self.lock.acquire()
+        brokers = BrokerModel.query.filter(BrokerModel.updated_at > last_updated_at).order_by(BrokerModel.id).all()
+        for broker in brokers:
+            self.add_broker(ip=broker.ip, port=broker.port, is_running=broker.is_running)
+
+        tpb_entries = TPBMapModel.query.filter(TPBMapModel.updated_at > last_updated_at).order_by(TPBMapModel.id).all()
+        for tpb_entry in tpb_entries:
+            self.add_partitions(tpb_entry.topic_name, [tpb_entry.broker_id, tpb_entry.partition_id])
+        
+        self.lock.release()
+
 
     def add_broker(self, ip, port, is_running=True):
         """
@@ -45,6 +64,11 @@ class MasterBroker:
         None
         """
         # WAL Update
+
+        if BrokerModel.query.filter_by(ip=ip, port=port).first() is not None:
+            print("WARNING: Attempted to add the same broker twice. Ignoring...")
+            return
+        
         self.lock.acquire()
         broker_id = self.counter.get_post_increment()
         self.brokers[broker_id] = Broker(
@@ -110,6 +134,20 @@ class MasterBroker:
         a list of Broker instances
         """
         return list(self.brokers.values())
+    
+    def get_locations_for_topic(self, topic_name):
+        """
+        Returns:
+        -----------------
+        a list of dict of partition_id to broker_url 
+        """
+        location_dict = self.topic_to_location.get(topic_name)
+        result = {
+            partition_id: self.brokers[broker_id].get_base_url()
+            for partition_id, broker_id in location_dict.items()
+        }
+        return result
+        
 
     def add_partitions(self, topic_name, partition_broker_list):
         """
