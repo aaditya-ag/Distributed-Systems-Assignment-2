@@ -49,7 +49,8 @@ class Broker:
         self.lock.release()
 
         # DB update
-        BrokerModel.query.filter_by(id=self.id).update(is_running=is_running)
+        broker = BrokerModel.query.filter_by(id=self.id).first()
+        broker.is_running=is_running
         db.session.commit()
 
 
@@ -63,4 +64,4 @@ class Broker:
         return self.ip + ":" + self.port
 
     def __str__(self):
-        return f"Broker://{self.ip}:{self.port}"
+        return f"Broker:: {self.ip}:{self.port}"

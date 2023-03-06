@@ -48,6 +48,9 @@ class MasterQueue:
     def add_broker(self, ip, port):
         self.master_broker.add_broker(ip, port)
 
+    def get_brokers(self):
+        return self.master_broker.get_brokers()
+
     def add_topic(self, topic_name):
         # WAL update
         # wal.log(opcode="ADD_TOPIC", argstring=str(topic_name+"#"))

@@ -103,6 +103,14 @@ class MasterBroker:
         broker_id = self.topic_to_location.get_broker_id(topic_name, partition_id)
         return self.brokers[broker_id]
 
+    def get_brokers(self):
+        """
+        Returns:
+        -----------------
+        a list of Broker instances
+        """
+        return list(self.brokers.values())
+
     def add_partitions(self, topic_name, partition_broker_list):
         """
         Params:
