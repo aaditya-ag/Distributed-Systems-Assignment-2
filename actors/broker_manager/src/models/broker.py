@@ -7,6 +7,8 @@ from db_models import (
 
 from src import db
 
+from utils import wal_utils as WAL
+
 class Broker:
     def __init__(self, id, ip, port, is_running=True):
         self.lock = threading.Lock()
@@ -20,6 +22,7 @@ class Broker:
         """
         Add The topic and its corresponding partition
         """
+        log_id = WAL.log(table="TPBMap", operation=WAL.INSERT, num_args=3, args=[topic_name, partition_id, self.id], stage=WAL.STATUS_BEGIN)
         self.lock.acquire()
         self.topic_partitions.add((topic_name, partition_id))
         self.lock.release()
@@ -32,6 +35,8 @@ class Broker:
         )
         db.session.add(tpb_entry)
         db.session.commit()
+        WAL.log(table="TPBMap", operation=WAL.INSERT, num_args=3, args=[topic_name, partition_id, self.id], stage=WAL.STATUS_END, begin_id=log_id)
+
 
 
     def get_number_of_partitions(self):

@@ -13,15 +13,18 @@ from db_models import (
     ProducerModel,
     ConsumerModel,
     TPLMapModel,
+    WALModel
 )
 
 from src.http_status_codes import *
+from utils import wal_utils as WAL
 
 class MasterQueue:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.topics = {} # dict[topic_name: Topic] : Topic class object representing the topic
         self.master_broker = MasterBroker()
+        # self.logging = True
 
     def fetch_from_db(self):
         self.lock.acquire()
@@ -49,8 +52,9 @@ class MasterQueue:
         self.master_broker.add_broker(ip, port)
 
     def add_topic(self, topic_name):
-        # WAL update
-        # wal.log(opcode="ADD_TOPIC", argstring=str(topic_name+"#"))
+        # WAL transaction begin
+        log_id = WAL.log(tablename="Topic", operation=WAL.INSERT, num_args=1, args=[topic_name], stage=WAL.STATUS_BEGIN)
+
         brokers = self.master_broker.get_least_loaded_brokers()
         self.lock.acquire()
         if topic_name in self.topics.keys():
@@ -62,19 +66,23 @@ class MasterQueue:
         topic = TopicModel(name=topic_name)
         db.session.add(topic)
         db.session.commit()
-        
+
+        # WAL transaction end
+        WAL.log(tablename="Topic", operation=WAL.INSERT, num_args=1, args=[topic_name], stage=WAL.STATUS_END, begin_id=log_id)
+
         self.master_broker.add_partitions(topic_name, self.do_partition(brokers, num_partitions=len(brokers)))
 
 
     def add_producer(self, topic_name):
-        # WAL update
-        # wal.log(opcode="ADD_PROD", argstring=str(topic_name+"#"))
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
             self.add_topic(topic_name)
-            
+
         producer_id = self.topics[topic_name].register_producer()
         
+        # WAL transaction begin
+        log_id = WAL.log(tablename="Producer", operation=WAL.INSERT, num_args=2, args=[producer_id, topic_name], stage=WAL.STATUS_BEGIN)
+
         # DB update
         producer = ProducerModel(
             producer_id=producer_id,
@@ -82,16 +90,24 @@ class MasterQueue:
         )
         db.session.add(producer)
         db.session.commit()
+
+        # WAL transaction end
+        WAL.log(tablename="Producer", operation=WAL.INSERT, num_args=2, args=[producer_id, topic_name], stage=WAL.STATUS_END, begin_id=log_id)
+
         return producer_id
 
     def add_consumer(self, topic_name):
-        # WAL update
+        # WAL transaction begin
         # wal.log(opcode="ADD_CONS", argstring=str(topic_name+"#"))
+        
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
             return None
         
         consumer_id = self.topics[topic_name].register_consumer()
+
+        # WAL transaction begin
+        log_id = WAL.log(tablename="Consumer", operation=WAL.INSERT, num_args=2, args=[consumer_id, topic_name], stage=WAL.STATUS_BEGIN)
         
         # DB update
         consumer = ConsumerModel(
@@ -100,11 +116,15 @@ class MasterQueue:
         )
         db.session.add(consumer)
         db.session.commit()
+
+        # WAL transaction begin
+        WAL.log(tablename="Consumer", operation=WAL.INSERT, num_args=2, args=[consumer_id, topic_name], stage=WAL.STATUS_END, begin_id=log_id)
+        
         return consumer_id
 
     
     def enqueue(self, topic_name, producer_id, message, partition_id = None):
-        # WAL update
+        # WAL transaction begin
         if(not self.has_topic(topic_name)):
             return False
         
@@ -128,9 +148,12 @@ class MasterQueue:
         if (message_index < 0):
             # raise Exception("ERROR: producer error.")
             return False
-
+        
+        # WAL transaction begin
+        log_id = WAL.log(tablename="TPLMap", operation=WAL.INSERT, num_args=4, args=[topic_name, producer_id, partition_id, message_index], stage=WAL.STATUS_BEGIN)
 
         if not broker.is_alive():
+            WAL.log(tablename="TPLMap", operation=WAL.INSERT, num_args=4, args=[topic_name, producer_id, partition_id, message_index], stage=WAL.STATUS_ERR, begin_id=log_id)
             return False
         
         # send request to broker
@@ -146,6 +169,7 @@ class MasterQueue:
         )
 
         if (response.status_code != HTTP_201_CREATED):
+            WAL.log(tablename="TPLMap", operation=WAL.INSERT, num_args=4, args=[topic_name, producer_id, partition_id, message_index], stage=WAL.STATUS_ERR, begin_id=log_id)
             return False
 
         # DB update
@@ -157,10 +181,13 @@ class MasterQueue:
         )
         db.session.add(tpl_entry)
         db.session.commit()
+
+        WAL.log(tablename="TPLMap", operation=WAL.INSERT, num_args=4, args=[topic_name, producer_id, partition_id, message_index], stage=WAL.STATUS_END, begin_id=log_id)
+
         return True
 
     def dequeue(self, topic_name, consumer_id):
-        # WAL update
+        # WAL transaction begin
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
             return None
@@ -171,16 +198,20 @@ class MasterQueue:
             # raise Exception("ERROR: consumer read error")
             print("Indexerror")
             return None
-
+        
+        log_id = WAL.log(tablename="Consumer", operation=WAL.UPDATE, num_args=3, args=[consumer_id, topic_name, index], stage=WAL.STATUS_BEGIN)
+            
         # get broker for the partition returned, 
         if (not self.master_broker.is_alive(topic_name, partition_id)):
             # raise Exception("ERROR: broker down")
+            WAL.log(tablename="Consumer", operation=WAL.UPDATE, num_args=3, args=[consumer_id, topic_name, index], stage=WAL.STATUS_ERR, begin_id=log_id)
             return None
         
         broker:Broker = self.master_broker.get_broker(topic_name, partition_id)
 
         if not broker.is_alive():
             print("Broker down")
+            WAL.log(tablename="Consumer", operation=WAL.UPDATE, num_args=3, args=[consumer_id, topic_name, index], stage=WAL.STATUS_ERR, begin_id=log_id)
             return None
         
         # send request to broker
@@ -197,6 +228,7 @@ class MasterQueue:
         print(response.status_code)
 
         if response.status_code != HTTP_200_OK:
+            WAL.log(tablename="Consumer", operation=WAL.UPDATE, num_args=3, args=[consumer_id, topic_name, index], stage=WAL.STATUS_ERR, begin_id=log_id)
             return None
         
         log_message = response.json().get("log")
@@ -207,6 +239,8 @@ class MasterQueue:
         consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
         consumer.idx_read_upto = index
         db.session.commit()
+
+        WAL.log(tablename="Consumer", operation=WAL.UPDATE, num_args=3, args=[consumer_id, topic_name, index], stage=WAL.STATUS_END, begin_id=log_id)
 
         return log_message
 
@@ -221,11 +255,24 @@ class MasterQueue:
         else:
             return num_unread_message
 
+    # def is_logging(self):
+    #     return self.logging
+
     def has_topic(self, str):
         with self.lock:
             return (str in self.topics.keys())
 
     def do_partition(self, broker_ids, num_partitions=3):
-
         return [[broker_ids[i%len(broker_ids)], i] for i in range(0, num_partitions)]
 
+    # def sync_db(walentry:WAL.WAL_Entry):
+        # self.lock.acquire()
+        # WAL.commit(walentry)
+        # self.update_from_db()
+        # self.lock.release()
+    
+    # def update_from_db():
+    #     for topic in self.topics:
+    #         topic.update_from_db()
+        
+    #     self.master_broker.update_from_db()

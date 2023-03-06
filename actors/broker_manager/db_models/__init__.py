@@ -5,6 +5,7 @@ from db_models.consumer import ConsumerModel
 from db_models.producer import ProducerModel
 from db_models.tpl_map import TPLMapModel
 from db_models.tpb_map import TPBMapModel
+from db_models.wal import WALModel
 
 """
 Database

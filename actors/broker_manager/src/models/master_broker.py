@@ -10,6 +10,7 @@ from db_models import (
 )
 
 from src import db
+from utils import wal_utils as WAL
 
 class MasterBroker:
     def __init__(self):
@@ -44,7 +45,6 @@ class MasterBroker:
         -----------------
         None
         """
-        # WAL Update
         self.lock.acquire()
         broker_id = self.counter.get_post_increment()
         self.brokers[broker_id] = Broker(
@@ -54,6 +54,9 @@ class MasterBroker:
             is_running=is_running
         )
         self.lock.release()
+
+        # WAL Update
+        log_id = WAL.log(tablename="Broker", operation=WAL.INSERT, num_args=3, args=[broker_id, ip, port], stage=WAL.STATUS_BEGIN)
         
         # DB update
         broker = BrokerModel(
@@ -64,6 +67,8 @@ class MasterBroker:
         db.session.add(broker)
         db.session.commit()
 
+        WAL.log(tablename="Broker", operation=WAL.INSERT, num_args=3, args=[broker_id, ip, port], stage=WAL.STATUS_END, begin_id=log_id)
+        return
 
     def remove_broker(self, broker_id):
         """
