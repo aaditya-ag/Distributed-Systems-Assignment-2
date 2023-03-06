@@ -13,3 +13,4 @@ class TPBMapModel(db.Model):
     topic_name = db.Column(db.String, db.ForeignKey(TopicModel.name))
     partition_id = db.Column(db.Integer, nullable=False)
     broker_id = db.Column(db.Integer, nullable=False)
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now(), nullable=False)

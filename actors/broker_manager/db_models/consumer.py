@@ -14,6 +14,8 @@ class ConsumerModel(db.Model):
     # Maintain an index upto which the consumer has read the messages
     idx_read_upto = db.Column(db.Integer, default=-1)
 
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now(), nullable=False)
+    
     __table_args__ = tuple(
         db.UniqueConstraint("consumer_id", "topic", name="consumer_id_constraint")
     )
