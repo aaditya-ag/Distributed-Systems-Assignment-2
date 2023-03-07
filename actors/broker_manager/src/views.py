@@ -33,7 +33,7 @@ class TopicAPI(Resource):
 class ProducerAPI(Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("topic_name", required=True, help="Topic name required")
+        parser.add_argument("topic_name", required=True, type=str, help="Topic name required")
         args = parser.parse_args()
         
         producer_id, topic_locations = master_queue.add_producer(args["topic_name"])
@@ -46,7 +46,7 @@ class ProducerAPI(Resource):
 class ConsumerAPI(Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("topic_name", required=True, help="Topic name required")
+        parser.add_argument("topic_name", required=True,type=str, help="Topic name required")
         args = parser.parse_args()
 
         consumer_id = master_queue.add_consumer(args["topic_name"])
@@ -65,7 +65,7 @@ class MessageAPI(Resource):
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument("consumer_id", type=int, required=True, help="Consumer id required")
-        parser.add_argument("topic_name", required=True, help="Topic name required")
+        parser.add_argument("topic_name", type=str, required=True, help="Topic name required")
         args = parser.parse_args()
         
         message = master_queue.dequeue(args["topic_name"], args["consumer_id"])
@@ -83,8 +83,8 @@ class MessageAPI(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument("producer_id", type=int, required=True, help="Producer id required")
-        parser.add_argument("topic_name", required=True, help="Topic name required")
-        parser.add_argument("message", required=True, help="Message required")
+        parser.add_argument("topic_name", type=str, required=True, help="Topic name required")
+        parser.add_argument("message", type=str, required=True, help="Message required")
         parser.add_argument("partition_id", type=int)
         args = parser.parse_args()
         
@@ -101,7 +101,7 @@ class MessageAPI(Resource):
 class MessageSizeAPI(Resource):
     def get(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("topic_name", required=True, help="Topic name required")
+        parser.add_argument("topic_name", type=str, required=True, help="Topic name required")
         parser.add_argument("consumer_id", type=int, required=True, help="Consumer id required")
         args = parser.parse_args()
         
@@ -120,8 +120,8 @@ class MessageSizeAPI(Resource):
 class BrokerAPI(Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("broker_ip", required=True, help="Broker ip required")
-        parser.add_argument("broker_port", required=True, help="Broker port required")
+        parser.add_argument("broker_ip", type=str, required=True, help="Broker ip required")
+        parser.add_argument("broker_port", type=str, required=True, help="Broker port required")
         args = parser.parse_args()
         
         master_queue.add_broker(args["broker_ip"], args["broker_port"])
@@ -136,12 +136,12 @@ class LiveSyncAPI(Resource):
     """
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument("operation", required=True, help="Operation required")
-        parser.add_argument("table_name", required=True, help="Table Name required")
-        parser.add_argument("data", required=True, help="Table Data required")
-        parser.add_argument("checkpoint", required=True, help="checkpoint required")
+        parser.add_argument("operation", required=True, type=int, help="Operation required")
+        parser.add_argument("table_name", required=True, type=str, help="Table Name required")
+        parser.add_argument("data", required=True, type=dict, help="Table Data required")
+        parser.add_argument("checkpoint", required=True, type=bool, help="checkpoint required")
         args = parser.parse_args()
-        sync_db.sync(operation=args["operation"], table=args["table"], data=args["data"])
+        sync_db.sync(operation=int(args["operation"]), table=args["table_name"], data=args["data"])
 
         if args["checkpoint"]:
             master_queue.create_checkpoint()

@@ -12,7 +12,7 @@ class ConsumerModel(db.Model):
     topic = db.Column(db.String, db.ForeignKey(TopicModel.name), primary_key=True)
 
     # Maintain an index upto which the consumer has read the messages
-    idx_read_upto = db.Column(db.Integer, default=-1)
+    idx_read_upto = db.Column(db.Integer, default=0)
 
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now(), nullable=False)
     

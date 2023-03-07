@@ -29,6 +29,7 @@ class MasterQueue:
         self.last_updated_at = datetime.min # when the last db update was committed
 
     def create_checkpoint(self):
+        print("Checkpointing ... ")
         self.lock.acquire()
         self.update_from_db()
         self.last_checkpoint = self.last_updated_at
