@@ -9,5 +9,5 @@ source setup.sh <YOUR_DATABASE_NAME_HERE>
 
 - Run the application:
 ```
-bash run_broker_manager.sh -p 5000
+bash run_broker.sh -p 5000
 ```

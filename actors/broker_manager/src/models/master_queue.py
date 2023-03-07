@@ -47,12 +47,16 @@ class MasterQueue:
         
         self.lock.acquire()
         
-        response = requests.get(
-            url=wr_only_mgr_url + "/init_sync",
-            json={
-                "timestamp": sync_db.get_minimum_of_max_timestamps_from_all_tables(),
-            }
-        )
+        try:
+            response = requests.get(
+                url=wr_only_mgr_url + "/init_sync",
+                json={
+                    "timestamp": sync_db.get_minimum_of_max_timestamps_from_all_tables(),
+                },
+            )
+        except:
+            self.lock.release()
+            return
 
         if response.status_code != HTTP_200_OK:
             self.lock.release()
@@ -133,6 +137,8 @@ class MasterQueue:
 
     def add_topic(self, topic_name):
         brokers = self.master_broker.get_least_loaded_brokers()
+        if len(brokers) == 0:
+            return False
         self.lock.acquire()
         if topic_name in self.topics.keys():
             raise Exception("ERROR: topic already exists in the queue.")
@@ -147,6 +153,7 @@ class MasterQueue:
         sync_db.sync_others(operation=sync_db.INSERT, table_name="Topic", data=topic.as_dict())
         
         self.master_broker.add_partitions(topic_name, self.do_partition(brokers, num_partitions=len(brokers)))
+        return True
 
 
     def add_producer(self, topic_name):
