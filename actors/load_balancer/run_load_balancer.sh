@@ -22,7 +22,6 @@ export RD_ONLY_MGR1_URL
 export RD_ONLY_MGR2_URL
 
 source env/bin/activate
-cd actors/load_balancer
 
 if $DEBUG; then
     flask --app app run --host=$HOST --port=$PORT --debug

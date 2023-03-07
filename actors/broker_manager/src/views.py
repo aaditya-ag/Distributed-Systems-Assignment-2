@@ -13,6 +13,13 @@ from src.utils import sync_db
 
 api = Api(app)
 
+class HeartbeatAPI(Resource):
+    def get(self):
+        return {
+            "status": "Success",
+        }, HTTP_200_OK
+
+
 class TopicAPI(Resource):
     def post(self):
         parser = reqparse.RequestParser()
@@ -196,6 +203,7 @@ class InitSyncAPI(Resource):
             "updates": updates
         }, HTTP_200_OK
 
+api.add_resource(HeartbeatAPI, "/")
 api.add_resource(TopicAPI, "/topics")
 api.add_resource(ProducerAPI, "/producers")
 api.add_resource(ConsumerAPI, "/consumers")
