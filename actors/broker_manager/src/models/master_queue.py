@@ -98,8 +98,8 @@ class MasterQueue:
         self.lock.release()
 
     def update_from_db(self):
-        self.lock.acquire()
-
+        # NOTE: lock is to be already acquired by the parent caller "create_checkpoint()"
+        # self.lock.acquire()
         present_update_timestamp = self.master_broker.update_from_db(last_checkpoint=self.last_checkpoint)
         topics = TopicModel.query.filter(TopicModel.updated_at > self.last_checkpoint).all()
         for topic in topics:
@@ -122,7 +122,7 @@ class MasterQueue:
             present_update_timestamp = max(present_update_timestamp, log.updated_at)
 
         self.last_updated_at = present_update_timestamp
-        self.lock.release()
+        # self.lock.release()
 
     def add_broker(self, ip, port):
         self.master_broker.add_broker(ip, port)
