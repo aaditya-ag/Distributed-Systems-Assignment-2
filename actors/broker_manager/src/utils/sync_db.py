@@ -90,7 +90,7 @@ def update(table, data):
         data["updated_at"] = datetime.fromisoformat(data["updated_at"])
     
     if table == "Consumer":
-        consumer = ConsumerModel.query.filter_by(consumer_id=data["consumer_id"], topic=data["topic_name"]).first()
+        consumer = ConsumerModel.query.filter_by(consumer_id=data["consumer_id"], topic=data["topic"]).first()
         if consumer is None:
             return
         if consumer.idx_read_upto < data["idx_read_upto"]:

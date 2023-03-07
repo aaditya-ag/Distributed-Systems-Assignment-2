@@ -18,9 +18,9 @@ class URLBook:
         for url in self.rd_only_mgr_urls:
             if self.is_live(url):
                 live_urls.append(url)
-        return live_urls[random.randint(0, len(live_urls))]
+        return live_urls[random.randint(0, len(live_urls)-1)]
         
-    def is_live(url):
+    def is_live(self, url):
         try:
             response = requests.get(url)
             if response.status_code != 200:

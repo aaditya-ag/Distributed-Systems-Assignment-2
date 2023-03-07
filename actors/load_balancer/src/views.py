@@ -100,7 +100,7 @@ class ConsumerAPI(Resource):
         
         return {
             "status": "Success",
-            "consumer_id": response.json().get("producer_id")
+            "consumer_id": response.json().get("consumer_id")
         }, HTTP_201_CREATED
     
 class MessageAPI(Resource):
@@ -177,7 +177,7 @@ class MessageAPI(Resource):
                 "status": "Success"
             }, HTTP_201_CREATED
 
-class MessageSizeAPI:
+class MessageSizeAPI(Resource):
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument("topic_name", required=True, help="Topic name required")
@@ -216,3 +216,4 @@ api.add_resource(TopicAPI, "/topics")
 api.add_resource(ProducerAPI, "/producers")
 api.add_resource(ConsumerAPI, "/consumers")
 api.add_resource(MessageAPI, "/messages")
+api.add_resource(MessageSizeAPI, "/unread_messages")

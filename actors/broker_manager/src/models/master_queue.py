@@ -180,7 +180,7 @@ class MasterQueue:
             return None
         
         consumer_id = self.topics[topic_name].register_consumer()
-        
+        print(f"Broker managers comes here to add_consumer for topic {topic_name}")
         # DB update
         consumer = ConsumerModel(
             consumer_id=consumer_id,
