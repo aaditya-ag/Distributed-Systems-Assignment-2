@@ -14,6 +14,8 @@ class ConsumerModel(db.Model):
     # Maintain an index upto which the consumer has read the messages
     idx_read_upto = db.Column(db.Integer, default=-1)
 
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now(), nullable=False)
+    
     __table_args__ = tuple(
         db.UniqueConstraint("consumer_id", "topic", name="consumer_id_constraint")
     )
@@ -21,6 +23,7 @@ class ConsumerModel(db.Model):
     def as_dict(self):
         return {
             "consumer_id": self.consumer_id,
-            "topic_id": self.topic_id,
+            "topic": self.topic,
             "idx_read_upto": self.idx_read_upto,
+            "updated_at": self.updated_at.isoformat()
         }

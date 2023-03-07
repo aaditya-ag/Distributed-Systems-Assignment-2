@@ -16,7 +16,7 @@ class Broker:
         self.topic_partitions = set()  # set of (topic_name, partition_id) in this broker
         self.is_running = is_running  # Alive Status
 
-    def add_partition(self, topic_name, partition_id):
+    def add_partition(self, topic_name, partition_id, mem_only=False):
         """
         Add The topic and its corresponding partition
         """
@@ -25,6 +25,9 @@ class Broker:
         self.lock.release()
 
         # DB Update
+        if mem_only:
+            return
+        
         tpb_entry = TPBMapModel(
             topic_name=topic_name,
             partition_id=partition_id,
@@ -49,7 +52,8 @@ class Broker:
         self.lock.release()
 
         # DB update
-        BrokerModel.query.filter_by(id=self.id).update(is_running=is_running)
+        broker = BrokerModel.query.filter_by(id=self.id).first()
+        broker.is_running=is_running
         db.session.commit()
 
 
@@ -63,4 +67,4 @@ class Broker:
         return self.ip + ":" + self.port
 
     def __str__(self):
-        return f"Broker://{self.ip}:{self.port}"
+        return f"Broker:: {self.ip}:{self.port}"

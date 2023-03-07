@@ -11,9 +11,15 @@ class ProducerModel(db.Model):
     # We need a topic_name for which this producer is registering
     topic = db.Column(db.String, db.ForeignKey(TopicModel.name), primary_key=True)
 
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now(), nullable=False)
+    
     __table_args__ = tuple(
         db.UniqueConstraint("producer_id", "topic", name="producer_id_constraint")
     )
 
     def as_dict(self):
-        return {"producer_id": self.producer_id, "topic_id": self.topic_id}
+        return {
+            "producer_id": self.producer_id, 
+            "topic": self.topic,
+            "updated_at": self.updated_at.isoformat()
+        }
