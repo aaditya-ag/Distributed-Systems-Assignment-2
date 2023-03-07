@@ -36,7 +36,7 @@ class TopicAPI(Resource):
         if response.status_code != HTTP_201_CREATED:
             return {
                 "status": "Failure",
-                "message": "Topic already exists"
+                "message": "Unable to create topic"
             }, HTTP_400_BAD_REQUEST
         
         return {
