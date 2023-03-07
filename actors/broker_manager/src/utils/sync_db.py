@@ -2,11 +2,23 @@ from db_models import *
 from src import db
 from datetime import datetime
 from sqlalchemy import func
+import requests
+import os
+from flask import request
 
 #OPERATION
 INSERT=0
 UPDATE=1
 DELETE=2
+
+def other_manager_urls():
+    manager_urls = [os.environ.get("WR_ONLY_MGR_URL"),
+                    os.environ.get("RD_ONLY_MGR1_URL"),
+                    os.environ.get("RD_ONLY_MGR2_URL")]
+    hostname = request.headers.get('Host')
+    manager_urls.remove(hostname)
+    return manager_urls
+
 
 def insert(table, data):
     if "updated_at" in data:
@@ -108,3 +120,21 @@ def get_minimum_of_max_timestamps_from_all_tables():
     max_timestamps.append(db.session.query(func.max(TPBMapModel.updated_at)).scalar() or datetime.min)
     print(min(max_timestamps).isoformat())
     return min(max_timestamps).isoformat()
+
+def sync_others(operation:int, table_name:str, data:dict, checkpoint:bool=False):
+    json_data={
+        "operation":operation,
+        "table_name":table_name,
+        "data":data,
+        "checkpoint":checkpoint,
+    }
+    for manager_url in other_manager_urls():
+        try:
+            response = requests.post(
+                url = manager_url + "/live_sync",
+                json=json_data
+            ),
+        except:
+            pass
+    return
+

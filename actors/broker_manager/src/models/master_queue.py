@@ -131,8 +131,6 @@ class MasterQueue:
         return self.master_broker.get_brokers()
 
     def add_topic(self, topic_name):
-        # WAL update
-        # wal.log(opcode="ADD_TOPIC", argstring=str(topic_name+"#"))
         brokers = self.master_broker.get_least_loaded_brokers()
         self.lock.acquire()
         if topic_name in self.topics.keys():
@@ -144,13 +142,13 @@ class MasterQueue:
         topic = TopicModel(name=topic_name)
         db.session.add(topic)
         db.session.commit()
+
+        sync_db.sync_others(operation=sync_db.INSERT, table_name="Topic", data=topic.as_dict())
         
         self.master_broker.add_partitions(topic_name, self.do_partition(brokers, num_partitions=len(brokers)))
 
 
     def add_producer(self, topic_name):
-        # WAL update
-        # wal.log(opcode="ADD_PROD", argstring=str(topic_name+"#"))
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
             self.add_topic(topic_name)
@@ -165,11 +163,10 @@ class MasterQueue:
         )
         db.session.add(producer)
         db.session.commit()
+        sync_db.sync_others(operation=sync_db.INSERT, table_name="Producer", data=producer.as_dict(), checkpoint=True)
         return producer_id, topic_locations
 
     def add_consumer(self, topic_name):
-        # WAL update
-        # wal.log(opcode="ADD_CONS", argstring=str(topic_name+"#"))
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
             return None
@@ -183,6 +180,7 @@ class MasterQueue:
         )
         db.session.add(consumer)
         db.session.commit()
+        sync_db.sync_others(operation=sync_db.INSERT, table_name="Consumer", data=consumer.as_dict(), checkpoint=True)
         return consumer_id
 
     
@@ -240,6 +238,8 @@ class MasterQueue:
         )
         db.session.add(tpl_entry)
         db.session.commit()
+
+        sync_db.sync_others(operation=sync_db.INSERT, table_name="TPLMap", data=tpl_entry.as_dict(), checkpoint=True)
         return True
 
     def dequeue(self, topic_name, consumer_id):
@@ -290,6 +290,8 @@ class MasterQueue:
         consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
         consumer.idx_read_upto = index
         db.session.commit()
+
+        sync_db.sync_others(operation=sync_db.UPDATE, table_name="Consumer", data=consumer.as_dict(), checkpoint=True)
 
         return log_message
 
