@@ -2,20 +2,41 @@ from db_models import *
 from src import db
 from datetime import datetime
 from sqlalchemy import func
+import requests
+import os
+from flask import request
 
 #OPERATION
 INSERT=0
 UPDATE=1
 DELETE=2
 
+def other_manager_urls():
+    manager_urls = [os.environ.get("WR_ONLY_MGR_URL"),
+                    os.environ.get("RD_ONLY_MGR1_URL"),
+                    os.environ.get("RD_ONLY_MGR2_URL")]
+    hostname = 'http://' + request.headers.get('Host')
+    print("Current Host Name: ", hostname)
+    if(hostname in manager_urls): manager_urls.remove(hostname)
+    return manager_urls
+
+
 def insert(table, data):
+    print(data)
+    print(type(data))
+    print("In Insert")
     if "updated_at" in data:
+        print(data["updated_at"])
+        print(type(data["updated_at"]))
+        print(datetime.fromisoformat(data["updated_at"]))
+        print(type(datetime.fromisoformat(data["updated_at"])))
         data["updated_at"] = datetime.fromisoformat(data["updated_at"])
     
     if table == "Topic":
         # check if topic already present; add topic;
         if TopicModel.query.filter_by(name=data["name"]).first():
             return
+        print("Syncing : Inserting into Topic table...")
         topic = TopicModel(**data)
         db.session.add(topic)
         db.session.commit()
@@ -69,7 +90,7 @@ def update(table, data):
         data["updated_at"] = datetime.fromisoformat(data["updated_at"])
     
     if table == "Consumer":
-        consumer = ConsumerModel.query.filter_by(consumer_id=data["consumer_id"], topic_name=data["topic_name"]).first()
+        consumer = ConsumerModel.query.filter_by(consumer_id=data["consumer_id"], topic=data["topic_name"]).first()
         if consumer is None:
             return
         if consumer.idx_read_upto < data["idx_read_upto"]:
@@ -86,6 +107,7 @@ def sync(operation, table, data):
         tablename = [Topic, Producer, Consumer, Broker, TPLMap, TBPMap]
         operation = [INSERT, UPDATE]
     """
+    print("SYNC CALLED :", operation, "||",table, "|| ",data)
     if operation == INSERT:
         insert(table, data)
     elif operation == UPDATE:
@@ -108,3 +130,22 @@ def get_minimum_of_max_timestamps_from_all_tables():
     max_timestamps.append(db.session.query(func.max(TPBMapModel.updated_at)).scalar() or datetime.min)
     print(min(max_timestamps).isoformat())
     return min(max_timestamps).isoformat()
+
+def sync_others(operation:int, table_name:str, data:dict, checkpoint:bool=False):
+    json_data={
+        "operation":operation,
+        "table_name":table_name,
+        "data":data,
+        "checkpoint":checkpoint,
+    }
+    print("Syncing with : ", other_manager_urls(), " || data : ", json_data)
+    for manager_url in other_manager_urls():
+        try:
+            response = requests.post(
+                url = manager_url + "/live_sync",
+                json=json_data
+            ),
+        except:
+            pass
+    return
+

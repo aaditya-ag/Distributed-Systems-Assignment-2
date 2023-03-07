@@ -6,6 +6,7 @@ from db_models import (
 )
 
 from src import db
+from src.utils import sync_db
 
 class Broker:
     def __init__(self, id, ip, port, is_running=True):
@@ -35,6 +36,8 @@ class Broker:
         )
         db.session.add(tpb_entry)
         db.session.commit()
+
+        sync_db.sync_others(operation=sync_db.INSERT, table_name="TPBMap", data=tpb_entry.as_dict(), checkpoint=True)
 
 
     def get_number_of_partitions(self):

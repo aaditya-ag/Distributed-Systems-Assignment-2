@@ -1,7 +1,7 @@
 import threading
 import random
 from src.models import Broker
-from src.utils import Prounter, TopicToLocationDict
+from src.utils import Prounter, TopicToLocationDict, sync_db
 from datetime import datetime
 from sqlalchemy import func 
 
@@ -110,6 +110,9 @@ class MasterBroker:
         )
         db.session.add(broker)
         db.session.commit()
+
+        sync_db.sync_others(operation=sync_db.INSERT, table_name="Broker", data=broker.as_dict(), checkpoint=True)
+
 
     def add_broker_from_db(self, broker_id, ip, port, is_running):
         self.brokers[broker_id] = Broker(
