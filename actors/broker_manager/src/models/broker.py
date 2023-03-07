@@ -6,6 +6,7 @@ from db_models import (
 )
 
 from src import db
+from src.utils import sync_db
 
 class Broker:
     def __init__(self, id, ip, port, is_running=True):
@@ -16,7 +17,7 @@ class Broker:
         self.topic_partitions = set()  # set of (topic_name, partition_id) in this broker
         self.is_running = is_running  # Alive Status
 
-    def add_partition(self, topic_name, partition_id):
+    def add_partition(self, topic_name, partition_id, sync=False, last=False):
         """
         Add The topic and its corresponding partition
         """
@@ -32,6 +33,9 @@ class Broker:
         )
         db.session.add(tpb_entry)
         db.session.commit()
+
+        if(sync): 
+            sync_db.sync_with_others(sync_db.INSERT, "TPBMap", tpb_entry.as_dict(), last)
 
 
     def get_number_of_partitions(self):

@@ -4,6 +4,7 @@ from src.models import Broker
 from src.utils import Prounter, TopicToLocationDict
 from datetime import datetime
 from sqlalchemy import func 
+from src.utils import sync_db
 
 from db_models import (
     BrokerModel,
@@ -109,6 +110,8 @@ class MasterBroker:
         db.session.add(broker)
         db.session.commit()
 
+        sync_db.sync_with_others(sync_db.INSERT, "Broker", broker.as_dict(), True)
+
 
     def remove_broker(self, broker_id):
         """
@@ -171,7 +174,7 @@ class MasterBroker:
         return result
         
 
-    def add_partitions(self, topic_name, partition_broker_list):
+    def add_partitions(self, topic_name, partition_broker_list, sync=False):
         """
         Params:
         -----------------
@@ -183,10 +186,11 @@ class MasterBroker:
         None
         """
         # print(partition_broker_list)
-        for [broker_id, partition_id] in partition_broker_list:
+        len_parts = len(partition_broker_list)-1
+        for i, [broker_id, partition_id] in enumerate(partition_broker_list):
             # print(f"Adding partition {partition_id} to broker {broker_id} for topic {topic_name}")
             self.topic_to_location.add(topic_name, partition_id, broker_id)
-            self.brokers[broker_id].add_partition(topic_name, partition_id)
+            self.brokers[broker_id].add_partition(topic_name, partition_id, sync, last=(i==len_parts))
         
 
     def assign_partition(self, topic_name):

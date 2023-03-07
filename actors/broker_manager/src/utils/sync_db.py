@@ -1,12 +1,18 @@
 from db_models import *
 from src import db
+import os
 from datetime import datetime
 from sqlalchemy import func
+import requests
 
 #OPERATION
 INSERT=0
 UPDATE=1
 DELETE=2
+
+#READ MANAGERS
+READ_MANAGERS = [os.environ.get("READ_ONLY_MNGR_1"), os.environ.get("READ_ONLY_MNGR_2")]
+WRITE_MANAGER = os.environ.get("WRITE_ONLY_MNGR")
 
 def insert(table, data):
     if "updated_at" in data:
@@ -108,3 +114,22 @@ def get_minimum_of_max_timestamps_from_all_tables():
     max_timestamps.append(db.session.query(func.max(TPBMapModel.updated_at)).scalar() or datetime.min)
     print(min(max_timestamps).isoformat())
     return min(max_timestamps).isoformat()
+
+# should these request be async ??? 
+def sync_with_others(operation, table, data, checkpoint=False):
+    json = {
+        "operation":operation, 
+        "table_name":table,
+        "data":data,
+        "checkpoint":checkpoint,
+    }
+    for read_manager in READ_MANAGERS:
+        if read_manager is not None:
+            try:
+                requests.post(
+                    url=read_manager,
+                    json=json
+                )
+            except:
+                pass
+

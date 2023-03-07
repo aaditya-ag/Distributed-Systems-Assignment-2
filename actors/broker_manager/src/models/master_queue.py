@@ -144,8 +144,10 @@ class MasterQueue:
         topic = TopicModel(name=topic_name)
         db.session.add(topic)
         db.session.commit()
+
+        sync_db.sync_with_others(sync_db.INSERT, "Topic", topic.as_dict())
         
-        self.master_broker.add_partitions(topic_name, self.do_partition(brokers, num_partitions=len(brokers)))
+        self.master_broker.add_partitions(topic_name, self.do_partition(brokers, num_partitions=len(brokers)), sync=True)
 
 
     def add_producer(self, topic_name):
@@ -165,6 +167,9 @@ class MasterQueue:
         )
         db.session.add(producer)
         db.session.commit()
+
+        sync_db.sync_with_others(sync_db.INSERT, "Producer", producer.as_dict(), True)
+
         return producer_id, topic_locations
 
     def add_consumer(self, topic_name):
@@ -183,6 +188,9 @@ class MasterQueue:
         )
         db.session.add(consumer)
         db.session.commit()
+
+        sync_db.sync_with_others(sync_db.INSERT, "Consumer", consumer.as_dict(), True)
+
         return consumer_id
 
     
@@ -240,6 +248,9 @@ class MasterQueue:
         )
         db.session.add(tpl_entry)
         db.session.commit()
+
+        sync_db.sync_with_others(sync_db.INSERT, "TPLMap", tpl_entry.as_dict(), True)
+
         return True
 
     def dequeue(self, topic_name, consumer_id):
@@ -290,6 +301,8 @@ class MasterQueue:
         consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
         consumer.idx_read_upto = index
         db.session.commit()
+
+        sync_db.sync_with_others(sync_db.UPDATE, "Consumer", consumer.as_dict(), True)
 
         return log_message
 
