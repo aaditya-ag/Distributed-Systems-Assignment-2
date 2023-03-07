@@ -10,6 +10,10 @@ while getopts ":d:h:p:" arg; do
     esac
 done
 
+export HOST
+export PORT
+export DEBUG
+
 source env/bin/activate
 cd actors/broker
 

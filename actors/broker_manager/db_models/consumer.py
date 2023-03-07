@@ -23,6 +23,7 @@ class ConsumerModel(db.Model):
     def as_dict(self):
         return {
             "consumer_id": self.consumer_id,
-            "topic_id": self.topic_id,
+            "topic": self.topic,
             "idx_read_upto": self.idx_read_upto,
+            "updated_at": self.updated_at.isoformat()
         }

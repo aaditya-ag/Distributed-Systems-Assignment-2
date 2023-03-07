@@ -16,4 +16,5 @@ class BrokerModel(db.Model):
             "ip": self.ip,
             "port": self.port,
             "is_running": self.is_running,
+            "updated_at": self.updated_at.isoformat()
         }

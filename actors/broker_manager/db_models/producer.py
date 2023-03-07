@@ -18,4 +18,8 @@ class ProducerModel(db.Model):
     )
 
     def as_dict(self):
-        return {"producer_id": self.producer_id, "topic_id": self.topic_id}
+        return {
+            "producer_id": self.producer_id, 
+            "topic": self.topic,
+            "updated_at": self.updated_at.isoformat()
+        }

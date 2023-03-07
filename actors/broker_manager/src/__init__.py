@@ -1,8 +1,10 @@
 from flask import Flask
+from flask.json.provider import DefaultJSONProvider
 from flask_sqlalchemy import SQLAlchemy
 import requests
 from threading import Thread
 from time import sleep
+import os
 
 app = Flask(__name__)
 app.config[
@@ -41,10 +43,20 @@ def health_checker():
 
 
 with app.app_context():
-    db.drop_all()
-    db.create_all()
-    master_queue.fetch_from_db()
+    if os.getenv("DEBUG") == "true":
+        db.drop_all()
+        db.create_all()
+    else:
+        db.create_all()
 
+    # fetch if it is a read_only manager
+    master_queue.do_init_sync()
+    
+    print("Done")
+
+    # finally reflect the changes done in database into in-memory data structures
+    master_queue.fetch_from_db() 
+    
     print("Starting health check thread")
     health_check_daemon = Thread(
         target=health_checker,

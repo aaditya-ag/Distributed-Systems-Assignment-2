@@ -19,3 +19,12 @@ class TPLMapModel(db.Model):
         db.UniqueConstraint("topic_name", "log_index", name="log_id_constraint"),
         db.ForeignKeyConstraint(["topic_name", "producer_id"], [ProducerModel.topic, ProducerModel.producer_id])
     )
+
+    def as_dict(self):
+        return {
+            "topic_name": self.topic_name,
+            "producer_id": self.producer_id,
+            "partition_id": self.partition_id,
+            "log_index": self.log_index,
+            "updated_at": self.updated_at.isoformat()
+        }

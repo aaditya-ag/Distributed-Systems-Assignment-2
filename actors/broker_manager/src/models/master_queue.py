@@ -2,6 +2,8 @@ import threading
 import requests
 from src import db
 from datetime import datetime
+from src.utils import sync_db
+import os
 
 from src.models import (
     Topic,
@@ -23,51 +25,103 @@ class MasterQueue:
         self.lock = threading.Lock()
         self.topics = {} # dict[topic_name: Topic] : Topic class object representing the topic
         self.master_broker = MasterBroker()
-        self.last_updated_at = datetime.min
+        self.last_checkpoint = datetime.min # when a consistent state was achieved 
+        self.last_updated_at = datetime.min # when the last db update was committed
+
+    def create_checkpoint(self):
+        self.lock.acquire()
+        self.update_from_db()
+        self.last_checkpoint = self.last_updated_at
+        self.lock.release()
+
+    def do_init_sync(self):
+        # Hardcoded here, needs change
+        wr_only_mgr_url = os.environ.get("WR_ONLY_MGR_URL")
+        if wr_only_mgr_url is None:
+            wr_only_mgr_url = "http://127.0.0.1:5001"
+
+        # print(os.environ.get("PORT"))
+        if os.environ.get("PORT") == wr_only_mgr_url.rsplit(":", 1)[1]:
+            return
+        
+        self.lock.acquire()
+        
+        response = requests.get(
+            url=wr_only_mgr_url + "/init_sync",
+            json={
+                "timestamp": sync_db.get_minimum_of_max_timestamps_from_all_tables(),
+            }
+        )
+
+        if response.status_code != HTTP_200_OK:
+            self.lock.release()
+            return
+        
+        updates = response.json()["updates"]
+        # print(updates)
+        for update in updates:
+            print("------------------")
+            table_name = update[0]
+            update_data = update[1]
+            print(table_name, update_data)
+            sync_db.insert(table_name, update_data)
+            self.last_updated_at = max(self.last_updated_at, update_data["updated_at"])
+            print("------------------")
+        
+        self.lock.release()
 
     def fetch_from_db(self):
         self.lock.acquire()
 
-        self.master_broker.fetch_from_db()
+        present_update_timestamp = self.master_broker.fetch_from_db()
         topics = TopicModel.query.all()
         for topic in topics:
             self.topics[topic.name] = Topic(topic.name)
+            present_update_timestamp = max(present_update_timestamp, topic.updated_at)
         
         consumers = ConsumerModel.query.all()
         for consumer in consumers:
             self.topics[consumer.topic].add_consumer(consumer.consumer_id, consumer.idx_read_upto)
+            present_update_timestamp = max(present_update_timestamp, consumer.updated_at)
         
         producers = ProducerModel.query.all()
         for producer in producers:
             self.topics[producer.topic].add_producer(producer.producer_id)
+            present_update_timestamp = max(present_update_timestamp, producer.updated_at)
         
         logs = TPLMapModel.query.order_by(TPLMapModel.log_index).all()
         for log in logs:
             self.topics[log.topic_name].add_message_index(log.partition_id, log.producer_id)
-            
+            present_update_timestamp = max(present_update_timestamp, log.updated_at)
+
+        self.last_updated_at = present_update_timestamp
         self.lock.release()
 
     def update_from_db(self):
         self.lock.acquire()
 
-        self.master_broker.update_from_db(last_updated_at=self.last_updated_at)
-        topics = TopicModel.query.filter(TopicModel.updated_at > self.last_updated_at).all()
+        present_update_timestamp = self.master_broker.update_from_db(last_checkpoint=self.last_checkpoint)
+        topics = TopicModel.query.filter(TopicModel.updated_at > self.last_checkpoint).all()
         for topic in topics:
             self.topics[topic.name] = Topic(topic.name)
+            present_update_timestamp = max(present_update_timestamp, topic.updated_at)
 
-        consumers = ConsumerModel.query.filter(ConsumerModel.updated_at > self.last_updated_at).all()
+        consumers = ConsumerModel.query.filter(ConsumerModel.updated_at > self.last_checkpoint).all()
         for consumer in consumers:
             self.topics[consumer.topic].add_consumer(consumer.consumer_id, consumer.idx_read_upto)
-        
-        producers = ProducerModel.query.filter(ProducerModel.updated_at > self.last_updated_at).all()
+            present_update_timestamp = max(present_update_timestamp, consumer.updated_at)
+
+        producers = ProducerModel.query.filter(ProducerModel.updated_at > self.last_checkpoint).all()
         for producer in producers:
             self.topics[producer.topic].add_producer(producer.producer_id)
+            present_update_timestamp = max(present_update_timestamp, producer.updated_at)
         
-        logs = TPLMapModel.query.filter(TPLMapModel.updated_at > self.last_updated_at).order_by(TPLMapModel.log_index).all()
+        logs = TPLMapModel.query.filter(TPLMapModel.updated_at > self.last_checkpoint).order_by(TPLMapModel.log_index).all()
         for log in logs:
             self.topics[log.topic_name].add_message_index(log.partition_id, log.producer_id)
+            present_update_timestamp = max(present_update_timestamp, log.updated_at)
 
-        self.last_updated_at = datetime.now()
+        self.last_updated_at = present_update_timestamp
         self.lock.release()
 
     def add_broker(self, ip, port):
@@ -256,5 +310,10 @@ class MasterQueue:
 
     def do_partition(self, broker_ids, num_partitions=3):
 
-        return [[broker_ids[i%len(broker_ids)], i] for i in range(0, num_partitions)]
+        res= list(
+            [broker_ids[i%len(broker_ids)], i] 
+            for i in range(0, num_partitions)
+        )
+        print(res)
+        return res
 
