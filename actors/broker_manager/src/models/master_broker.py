@@ -31,16 +31,17 @@ class MasterBroker:
 
         brokers = BrokerModel.query.order_by(BrokerModel.id).all()
         for broker in brokers:
-            self.add_broker(ip=broker.ip, port=broker.port, is_running=broker.is_running)
+            self.add_broker_from_db(broker_id=broker.id, ip=broker.ip, port=broker.port, is_running=broker.is_running)
             present_update_timestamp = max(present_update_timestamp, broker.updated_at)
 
         tpb_entries = TPBMapModel.query.all()
         for tpb_entry in tpb_entries:
             self.add_partitions(
-                tpb_entry.topic_name, 
-                [
+                topic_name=tpb_entry.topic_name, 
+                partition_broker_list=[
                     [tpb_entry.broker_id, tpb_entry.partition_id]
-                ]
+                ],
+                mem_only=True
             )
             present_update_timestamp = max(present_update_timestamp, tpb_entry.updated_at)
 
@@ -52,16 +53,17 @@ class MasterBroker:
         present_update_timestamp = last_checkpoint
         brokers = BrokerModel.query.filter(BrokerModel.updated_at > last_checkpoint).order_by(BrokerModel.id).all()
         for broker in brokers:
-            self.add_broker(ip=broker.ip, port=broker.port, is_running=broker.is_running)
+            self.add_broker_from_db(broker_id=broker.id, ip=broker.ip, port=broker.port, is_running=broker.is_running)
             present_update_timestamp = max(present_update_timestamp, broker.updated_at)
 
         tpb_entries = TPBMapModel.query.filter(TPBMapModel.updated_at > last_checkpoint).order_by(TPBMapModel.id).all()
         for tpb_entry in tpb_entries:
             self.add_partitions(
-                tpb_entry.topic_name, 
-                [
+                topic_name=tpb_entry.topic_name, 
+                partition_broker_list=[
                     [tpb_entry.broker_id, tpb_entry.partition_id]
-                ]
+                ],
+                mem_only=True
             )
             present_update_timestamp = max(present_update_timestamp, tpb_entry.updated_at)
         
@@ -109,30 +111,37 @@ class MasterBroker:
         db.session.add(broker)
         db.session.commit()
 
+    def add_broker_from_db(self, broker_id, ip, port, is_running):
+        self.brokers[broker_id] = Broker(
+            id=broker_id, 
+            ip=ip, 
+            port=port, 
+            is_running=is_running
+        )
 
-    def remove_broker(self, broker_id):
-        """
-        Remove a broker
+    # def remove_broker(self, broker_id):
+    #     """
+    #     Remove a broker
 
-        Params:
-        -----------------
-        ip: str
-        port: str
+    #     Params:
+    #     -----------------
+    #     ip: str
+    #     port: str
 
-        Returns:
-        -----------------
-        None
-        """
-        # WAL Update
-        self.lock.acquire()
-        for topic_name, partition_id in self.brokers[broker_id].topic_partitions:
-            self.topic_to_location.remove(topic_name, partition_id)
-        del self.brokers[broker_id]
-        self.lock.release()
+    #     Returns:
+    #     -----------------
+    #     None
+    #     """
+    #     # WAL Update
+    #     self.lock.acquire()
+    #     for topic_name, partition_id in self.brokers[broker_id].topic_partitions:
+    #         self.topic_to_location.remove(topic_name, partition_id)
+    #     del self.brokers[broker_id]
+    #     self.lock.release()
         
-        # DB update
-        BrokerModel.query.filter_by(id=broker_id).delete()
-        db.session.commit()
+    #     # DB update
+    #     BrokerModel.query.filter_by(id=broker_id).delete()
+    #     db.session.commit()
 
     def get_broker(self, topic_name, partition_id):
         """
@@ -171,13 +180,13 @@ class MasterBroker:
         return result
         
 
-    def add_partitions(self, topic_name, partition_broker_list):
+    def add_partitions(self, topic_name, partition_broker_list, mem_only=False):
         """
         Params:
         -----------------
         topic_name: str
         partition_broker_list: list([broker_id:int, partition_id:int])
-
+        mem_only: boolean (default False): if True, only updates the in-memory data structure, else updates the database as well
         Returns:
         -----------------
         None
@@ -186,7 +195,7 @@ class MasterBroker:
         for [broker_id, partition_id] in partition_broker_list:
             # print(f"Adding partition {partition_id} to broker {broker_id} for topic {topic_name}")
             self.topic_to_location.add(topic_name, partition_id, broker_id)
-            self.brokers[broker_id].add_partition(topic_name, partition_id)
+            self.brokers[broker_id].add_partition(topic_name, partition_id, mem_only)
         
 
     def assign_partition(self, topic_name):

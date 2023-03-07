@@ -9,7 +9,7 @@ import os
 app = Flask(__name__)
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "postgresql://postgres:admin@localhost:5432/distributed_queue"
+] = "postgresql://postgres:admin@localhost:5432/distributed_queue_1"
 db = SQLAlchemy(app)
 
 
