@@ -20,9 +20,6 @@ export WR_ONLY_MGR_URL
 export RD_ONLY_MGR1_URL
 export RD_ONLY_MGR2_URL
 
-python3 -m venv env
-pip install -r requirements.txt
-rm requirements.txt
 source env/bin/activate
 
 if $DEBUG; then

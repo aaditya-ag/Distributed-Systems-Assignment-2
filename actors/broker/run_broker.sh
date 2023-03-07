@@ -14,9 +14,6 @@ export HOST
 export PORT
 export DEBUG
 
-python3 -m venv env
-pip install -r requirements.txt
-rm requirements.txt
 source env/bin/activate
 
 if $DEBUG; then

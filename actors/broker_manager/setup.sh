@@ -1,5 +1,13 @@
-# # Install PostgreSQL
-# # -----------------------------------------------------------------
+sudo apt install python3-venv
+cp ../../requirements.txt .
+python3 -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+deactivate
+rm requirements.txt
+
+# Install PostgreSQL
+# -----------------------------------------------------------------
 sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 sudo apt-get update

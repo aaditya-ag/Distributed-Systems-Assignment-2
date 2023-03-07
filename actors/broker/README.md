@@ -4,7 +4,7 @@ Run the following commands in the terminal.
 
 - To setup database and initial config:
 ```
-source setup.sh
+source setup.sh <YOUR_DATABASE_NAME_HERE>
 ```
 
 - Run the application:

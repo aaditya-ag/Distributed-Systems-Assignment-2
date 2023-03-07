@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 # Declare db using SQL Alchemy, give the db address
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:admin@localhost:5432/distributed_queue"
+app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://postgres:admin@localhost:5432/{os.getenv('DATABASE_NAME')}"
 db = SQLAlchemy(app)
 
 from db_models import *
