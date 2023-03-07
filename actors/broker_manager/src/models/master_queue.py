@@ -47,12 +47,16 @@ class MasterQueue:
         
         self.lock.acquire()
         
-        response = requests.get(
-            url=wr_only_mgr_url + "/init_sync",
-            json={
-                "timestamp": sync_db.get_minimum_of_max_timestamps_from_all_tables(),
-            }
-        )
+        try:
+            response = requests.get(
+                url=wr_only_mgr_url + "/init_sync",
+                json={
+                    "timestamp": sync_db.get_minimum_of_max_timestamps_from_all_tables(),
+                },
+            )
+        except:
+            self.lock.release()
+            return
 
         if response.status_code != HTTP_200_OK:
             self.lock.release()

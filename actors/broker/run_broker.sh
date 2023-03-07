@@ -1,9 +1,6 @@
 HOST=127.0.0.1
-PORT=5001
+PORT=5000
 DEBUG=true
-WR_ONLY_MGR_URL="http://127.0.0.1:5001"
-RD_ONLY_MGR1_URL="http://127.0.0.1:5002"
-RD_ONLY_MGR2_URL="http://127.0.0.1:5003"
 
 while getopts ":d:h:p:" arg; do
     case $arg in
@@ -13,16 +10,14 @@ while getopts ":d:h:p:" arg; do
     esac
 done
 
-
 export HOST
 export PORT
 export DEBUG
-export WR_ONLY_MGR_URL
-export RD_ONLY_MGR1_URL
-export RD_ONLY_MGR2_URL
 
+python3 -m venv env
+pip install -r requirements.txt
+rm requirements.txt
 source env/bin/activate
-cd actors/broker_manager
 
 if $DEBUG; then
     flask --app app run --host=$HOST --port=$PORT --debug
