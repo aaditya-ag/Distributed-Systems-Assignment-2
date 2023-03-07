@@ -24,10 +24,16 @@ class TopicAPI(Resource):
                 "message": "Topic already exists"
             }, HTTP_400_BAD_REQUEST
         
-        master_queue.add_topic(args["topic_name"])
-        return {
-            "status": "Success"
-        }, HTTP_201_CREATED
+        is_added = master_queue.add_topic(args["topic_name"])
+        if is_added:
+            return {
+                "status": "Success"
+            }, HTTP_201_CREATED
+        else:
+            return {
+                "status": "Failure",
+                "message": "Unable to add topic due to no live brokers"        
+            }, HTTP_400_BAD_REQUEST
     
 
 class ProducerAPI(Resource):
