@@ -7,9 +7,7 @@ from time import sleep
 import os
 
 app = Flask(__name__)
-app.config[
-    "SQLALCHEMY_DATABASE_URI"
-] = f"postgresql://postgres:admin@localhost:5432/{os.getenv('DATABASE_NAME')}"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 db = SQLAlchemy(app)
 
 
@@ -43,7 +41,7 @@ def health_checker():
 
 
 with app.app_context():
-    if os.getenv("DEBUG") == "true":
+    if os.environ.get("DEBUG") == "true":
         db.drop_all()
         db.create_all()
     else:

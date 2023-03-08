@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  read_only_broker_manager_app_1:
+      container_name: read_only_broker_manager_app_1
+      image: read_only_broker_manager_app_1
+      build: .
+      ports:
+        - "5002:5000"
+      environment:
+        - DATABASE_URL=postgresql://postgres:postgres@read_only_broker_manager_1_db:5432/postgres
+        - WR_ONLY_MGR_URL=http://127.0.0.1:5001
+        - RD_ONLY_MGR1_URL=http://127.0.0.1:5002
+        - RD_ONLY_MGR2_URL=http://127.0.0.1:5003
+        - DEBUG=false
+      depends_on:
+        read_only_broker_manager_1_db:
+          condition: service_healthy
+      restart: always
+
+  read_only_broker_manager_1_db:
+    container_name: read_only_broker_manager_1_db
+    image: postgres:15.1
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - pgdata_read_only_1:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 15s
+      retries: 5
+    restart: always
+
+volumes:
+  pgdata_read_only_1: 
+

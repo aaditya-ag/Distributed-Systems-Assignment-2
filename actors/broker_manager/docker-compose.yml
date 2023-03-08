@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  write_only_broker_manager_app:
+    container_name: write_only_broker_manager_app
+    image: write_only_broker_manager_app
+    build: .
+    ports:
+      - "5001:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@write_only_broker_manager_db:5432/postgres
+      - WR_ONLY_MGR_URL=http://127.0.0.1:5001
+      - RD_ONLY_MGR1_URL=http://127.0.0.1:5002
+      - RD_ONLY_MGR2_URL=http://127.0.0.1:5003
+      - DEBUG=false
+    depends_on:
+      write_only_broker_manager_db:
+        condition: service_healthy
+    restart: always
+    
+  write_only_broker_manager_db:
+    container_name: write_only_broker_manager_db
+    image: postgres:15.1
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 15s
+      retries: 5
+    restart: always
+
+volumes:
+  pgdata: 

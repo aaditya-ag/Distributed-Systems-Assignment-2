@@ -2,12 +2,7 @@
 
 Run the following commands in the terminal.
 
-- To setup database and initial config:
 ```
-source setup.sh <YOUR_DATABASE_NAME_HERE>
-```
-
-- Run the application:
-```
-bash run_broker_manager.sh -p 5000
+docker compose up --build -d
+docker compose -f <filename.yml> up --build -d
 ```

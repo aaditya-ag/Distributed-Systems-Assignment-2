@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  load_balancer:
+    container_name: load_balancer
+    image: load_balancer
+    build: .
+    ports:
+      - "5004:5000"
+    environment:
+      - WR_ONLY_MGR_URL=http://127.0.0.1:5001
+      - RD_ONLY_MGR1_URL=http://127.0.0.1:5002
+      - RD_ONLY_MGR2_URL=http://127.0.0.1:5003
+      - DEBUG=false

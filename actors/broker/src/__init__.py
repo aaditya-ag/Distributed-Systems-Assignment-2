@@ -7,13 +7,14 @@ import os
 app = Flask(__name__)
 
 # Declare db using SQL Alchemy, give the db address
-app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://postgres:admin@localhost:5432/{os.getenv('DATABASE_NAME')}"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+
 db = SQLAlchemy(app)
 
 from db_models import *
 
 with app.app_context():
-    if os.getenv("DEBUG") == "true":
+    if os.environ.get("DEBUG") == "true":
         db.drop_all()
         db.create_all()
     else:

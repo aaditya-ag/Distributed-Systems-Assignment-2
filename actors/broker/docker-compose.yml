@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  broker_app:
+      container_name: broker_app
+      image: broker_app
+      build: .
+      ports:
+        - "5000:5000"
+      environment:
+        - DATABASE_URL=postgresql://postgres:postgres@broker_db:5432/postgres
+        - DEBUG=false
+      depends_on:
+        broker_db:
+          condition: service_healthy
+
+  broker_db:
+    container_name: broker_db
+    image: postgres:15.1
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 15s
+      retries: 5
+
+
+volumes:
+  pgdata:
