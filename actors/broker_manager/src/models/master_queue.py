@@ -296,7 +296,7 @@ class MasterQueue:
         
         # DB update
         consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
-        consumer.idx_read_upto = index
+        consumer.idx_read_upto = index + 1
         db.session.commit()
 
         sync_db.sync_others(operation=sync_db.UPDATE, table_name="Consumer", data=consumer.as_dict(), checkpoint=True)
