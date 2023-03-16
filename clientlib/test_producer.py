@@ -1,5 +1,5 @@
 from producer_client import ProducerClient
-
+import requests
 load_balancer_addr = "127.0.0.1"
 load_balancer_port = "5000"
 
@@ -49,4 +49,18 @@ def run_test():
     producer.exit()
 
 if __name__ == "__main__":
+    resp = requests.post("http://127.0.0.1:5001/brokers", json={
+        "broker_ip": "http://127.0.0.1",
+        "broker_port": "8000"
+    })
+
+    resp = requests.post("http://127.0.0.1:5001/brokers", json={
+        "broker_ip": "http://127.0.0.1",
+        "broker_port": "8001"
+    })
+
+    resp = requests.post("http://127.0.0.1:5001/brokers", json={
+        "broker_ip": "http://127.0.0.1",
+        "broker_port": "8002"
+    })
     run_test()

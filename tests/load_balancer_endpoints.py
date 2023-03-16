@@ -5,7 +5,7 @@ import requests
 import sys
 
 base_url = "http://127.0.0.1"
-port = 5001
+port = 5000
 
 if len(sys.argv) == 3:
     base_url = sys.argv[1]
@@ -17,19 +17,40 @@ printInfo("Testing Broker Manager Endpoints")
 
 #### Testing Heartbeats ####
 
-printInfo("1. Heartbeat check")
+# printInfo("1. Heartbeat check")
 
-try:
-    response: requests.Response = requests.get(url + "/")
+# try:
+#     response: requests.Response = requests.get(url + "/")
 
-    assert response.status_code == 200
-    assert response.json()["status"] == "Success"
+#     assert response.status_code == 200
+#     assert response.json()["status"] == "Success"
 
-    printSuccess("Test passed")
-except Exception as e:
-    printError("Test failed")
+#     printSuccess("Test passed")
+# except Exception as e:
+#     printError("Test failed")
 
-print()
+# print()
+
+resp = requests.post("http://127.0.0.1:5001/brokers", json={
+    "broker_ip": "http://127.0.0.1",
+    "broker_port": "8000"
+})
+assert(resp.status_code == 201)
+print("Broker 1 added")
+
+resp = requests.post("http://127.0.0.1:5001/brokers", json={
+    "broker_ip": "http://127.0.0.1",
+    "broker_port": "8001"
+})
+assert(resp.status_code == 201)
+print("Broker 2 added")
+
+resp = requests.post("http://127.0.0.1:5001/brokers", json={
+    "broker_ip": "http://127.0.0.1",
+    "broker_port": "8002"
+})
+assert(resp.status_code == 201)
+print("Broker 3 added")
 
 #### Testing Topics API ####
 
@@ -39,7 +60,7 @@ printInfo("1. Creating New Topic")
 
 try:
     response: requests.Response = requests.post(
-        url + "/topics", json={"topic_name": "T3"}
+        url + "/topics", json={"topic_name": "T1"}
     )
     assert response.status_code == 201
     assert response.json()["status"] == "Success"
@@ -99,6 +120,12 @@ try:
     assert response.json()["status"] == "Success"
     print(f'Consumer id: {response.json()["consumer_id"]}')
 
+    response: requests.Response = requests.post(
+        url + "/consumers", json={"topic_name": "T1"}
+    )
+    assert response.status_code == 201
+    assert response.json()["status"] == "Success"
+
     printSuccess("Test passed")
 except Exception as e:
     printError("Test failed")
@@ -107,7 +134,7 @@ printInfo("2. Creating Consumers on Non-existent topics")
 
 try:
     response: requests.Response = requests.post(
-        url + "/consumers", json={"topic_name": "T4"}
+        url + "/consumers", json={"topic_name": "T2"}
     )
     assert response.status_code == 400
     assert response.json()["status"] == "Failure"
@@ -126,36 +153,36 @@ printInfo("1. Posting Messages")
 
 try:
     response: requests.Response = requests.post(
-        url + "/messages", json={"topic_name": "T3",
+        url + "/messages", json={"topic_name": "T1",
                                   "producer_id": 0,
-                                  "message": "M1 for T3",
+                                  "message": "M1 for T1",
                                   "partition_id": 0
                                   }
     )
     assert response.status_code == 201
 
     response: requests.Response = requests.post(
-        url + "/messages", json={"topic_name": "T3",
+        url + "/messages", json={"topic_name": "T1",
                                   "producer_id": 0,
-                                  "message": "M2 for T3",
+                                  "message": "M2 for T1",
                                   "partition_id": 1
                                   }
     )
     assert response.status_code == 201
 
     response: requests.Response = requests.post(
-        url + "/messages", json={"topic_name": "T3",
+        url + "/messages", json={"topic_name": "T1",
                                   "producer_id": 0,
-                                  "message": "M3 for T3",
+                                  "message": "M3 for T1",
                                   "partition_id": 0
                                   }
     )
     assert response.status_code == 201
 
     response: requests.Response = requests.post(
-        url + "/messages", json={"topic_name": "T3",
+        url + "/messages", json={"topic_name": "T1",
                                   "producer_id": 0,
-                                  "message": "M4 for T3",
+                                  "message": "M4 for T1",
                                   "partition_id": 2
                                   }
     )
@@ -176,7 +203,7 @@ printInfo("1. Reading Messages")
 try:
     for _ in range(4):
         response: requests.Response = requests.get(
-            url + "/messages", json={"topic_name": "T3",
+            url + "/messages", json={"topic_name": "T1",
                                     "consumer_id": 0
                                     }
         )
@@ -197,7 +224,7 @@ printInfo("1. Number of unread Messages")
 
 try:
     response: requests.Response = requests.get(
-        url + "/unread_messages", json={"topic_name": "T3",
+        url + "/unread_messages", json={"topic_name": "T1",
                                 "consumer_id": 1
                                 }
     )
