@@ -28,7 +28,7 @@ class Logs(Resource):
 
         args = parser.parse_args()
 
-        print(f'{args["log_index"]},{args["topic_name"]},{args["partition_id"]}')
+        print(f'[GET]{args["log_index"]},{args["topic_name"]},{args["partition_id"]}')
 
         log = LogModel.query.filter_by(
             log_index=args["log_index"],
@@ -56,7 +56,7 @@ class Logs(Resource):
         args = parser.parse_args()
 
         print(
-            f'{args["log_index"]},{args["topic_name"]},{args["partition_id"]},{args["log_message"]}'
+            f'[POST]{args["log_index"]},{args["topic_name"]},{args["partition_id"]},{args["log_message"]}'
         )
 
         log = LogModel(log_index = args["log_index"],

@@ -36,10 +36,13 @@ class Topic:
             if the log and consumer_id exists, otherwise it returns (-1, -1).
         """
         if not self.consumers.contains(consumer_id):
+            print(consumer_id)
+            print("Consumer nahi hai", self.name)
             return (-1, -1)
         log_size = self.logs.size()
         index = self.consumers.get_and_update(consumer_id, log_size)
         if index == log_size:
+            print("Pura padh liya", self.name)
             return (-1, -1)
         partition_id = self.logs.get(index)
 
@@ -71,6 +74,12 @@ class Topic:
             return -1
         index = self.logs.add(partition_id)
         print(f"Topic Model, add_message_index(): {index}")
+        return index
+    
+    def insert_message_index(self, partition_id, producer_id, index):
+        if self.producers.contains(producer_id) == False:
+            return -1
+        self.logs.insert(partition_id, index)
         return index
     
     def count_unread_messages(self, consumer_id):

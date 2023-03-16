@@ -154,6 +154,7 @@ class LiveSyncAPI(Resource):
         parser.add_argument("data", required=True, type=dict, help="Table Data required")
         parser.add_argument("checkpoint", required=True, type=bool, help="checkpoint required")
         args = parser.parse_args()
+
         sync_db.sync(operation=int(args["operation"]), table=args["table_name"], data=args["data"])
 
         if args["checkpoint"]:

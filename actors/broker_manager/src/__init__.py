@@ -29,12 +29,12 @@ def health_checker():
                 broker_url = broker.get_base_url()
                 response = requests.get(broker_url)
                 assert(response.status_code == 200)
-                print(f"{broker} Alive")
+                # print(f"{broker} Alive")
                 if not broker.is_alive():
                     with app.app_context():
                         broker.update_running_status(True)
             except Exception as e:
-                print(f"{broker} Not Responding...")
+                # print(f"{broker} Not Responding...")
                 if broker.is_alive():
                     with app.app_context():
                         broker.update_running_status(False)
