@@ -54,7 +54,8 @@ class Topic:
             if the log and consumer_id exists, otherwise it returns (-1, -1).
         """
         if not self.consumers.contains(consumer_id):
-            return (-1, -1)
+            print(f'No consumer with id {consumer_id} in {self.name}')
+            return (-1, -1) 
         log_size = self.logs.size()
         index = self.consumers.get(consumer_id)
         if index == log_size:
@@ -62,6 +63,11 @@ class Topic:
         partition_id = self.logs.get(index)
 
         return (index, partition_id)
+    
+    def update_message_index(self, consumer_id):
+        print(f'Updating message index for {consumer_id} in {self.name}')
+        # assert self.consumers.contains(consumer_id)
+        self.consumers.update(consumer_id)
     
     def add_message_index(self, partition_id, producer_id):
         """

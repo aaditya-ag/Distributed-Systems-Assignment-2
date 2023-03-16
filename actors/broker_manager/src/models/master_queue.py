@@ -258,10 +258,11 @@ class MasterQueue:
         # WAL update
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
+            print("Topic does not exist")
             return None
         
         # get partition from the in-memory structure
-        index, partition_id = self.topics[topic_name].get_and_update_message_index(consumer_id)
+        index, partition_id = self.topics[topic_name].get_message_index(consumer_id)
         if(index < 0):
             # raise Exception("ERROR: consumer read error")
             print("Indexerror")
@@ -297,9 +298,11 @@ class MasterQueue:
         log_message = response.json().get("log")
 
         print(log_message)
+
+        self.topics[topic_name].update_message_index(consumer_id)
         
         # DB update
-        consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
+        consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id, topic=topic_name).first()
         consumer.idx_read_upto = index + 1
         db.session.commit()
 

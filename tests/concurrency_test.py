@@ -2,8 +2,8 @@ import threading
 import requests
 import time
 
-NUM_MESSAGES = 10
-NUM_TOPICS = 3
+NUM_MESSAGES = 100
+NUM_TOPICS = 4
 
 def init():
     resp = requests.post("http://127.0.0.1:5001/brokers", json={
@@ -57,25 +57,41 @@ def produce(topic_id):
 def consume(topic_id):
     log_file = open(f"C{topic_id}", "w")
     topic_name = f"concurrent-test-T-{topic_id}"
-    # time.sleep(5)
+    time.sleep(5)
     resp=requests.post("http://127.0.0.1:5000/consumers", json={
         "topic_name": topic_name
     })
     assert(resp.status_code == 201)
     consumer_id = resp.json()["consumer_id"]
 
-    counter = NUM_MESSAGES
-    while(counter > 0):
+    # counter = NUM_MESSAGES
+    # while(counter > 0):
+    for i in range(NUM_MESSAGES):
+
+        while(True):
+            resp = requests.get("http://127.0.0.1:5000/unread_messages",json={
+                "consumer_id": consumer_id,
+                "topic_name": topic_name,
+            })
+            if resp.status_code != 200:
+                time.sleep(0.1)
+                continue
+            if resp.json()["message_size"] > 0:
+                break
+
         resp = requests.get("http://127.0.0.1:5000/messages", json={
                 "consumer_id": consumer_id,
                 "topic_name": topic_name,
         })
-        time.sleep(0.1)
-        if resp.status_code != 200:
-            time.sleep(0.01)
-            continue
-        counter -= 1
-        print(f"Topic-id = {topic_id}, counter = {counter}")
+        
+        assert(resp.status_code == 200)
+        # time.sleep(0.1)
+        # if resp.status_code != 200:
+        #     time.sleep(0.01)
+        #     continue
+
+        # counter -= 1
+        print(f"Topic-id = {topic_id}, counter = {i}")
         msg = resp.json()["message"]
         log_file.write(msg)
         log_file.write("\n")
@@ -87,24 +103,23 @@ def concurrent_run():
     threads = []
     for i in range(NUM_TOPICS):
         prod_thread = threading.Thread(target=produce, args=(i, ))
+        threads.append([prod_thread,f"prod-{i}"])
         prod_thread.start()
-        threads.append(prod_thread)
-    # for t in threads:
-    #     t.join()
-    # threads = []    
+        print(f"Started {i}th producer thread")
+
     for i in range(NUM_TOPICS):
         cons_thread = threading.Thread(target=consume, args=(i, ))
+        threads.append([cons_thread, f"cons-{i}"])
         cons_thread.start()
-        threads.append(cons_thread)
+        print(f"Started {i}th consumer thread")
 
     for t in threads:
-        t.join()
-
-def synchronous_run():
-    pass
+        t[0].join()
+        print(f"{t[1]} joined")
 
 if __name__ == "__main__":
     init()
+    time.sleep(5)
     start = time.time()
     concurrent_run()
     end = time.time()

@@ -13,10 +13,13 @@ class URLBook:
             raise IndexError("Index out of bounds")
         return self.rd_only_mgr_urls[index]
     
-    def get_random_live_rd_url(self):
+    def get_random_live_rd_url(self, id):
         live_urls = []
         for url in self.rd_only_mgr_urls:
             if self.is_live(url):
+                if int(url[-1])%2 == int(id)%2:
+                    print(url)
+                    return url
                 live_urls.append(url)
         return live_urls[random.randint(0, len(live_urls)-1)]
         
