@@ -111,6 +111,11 @@ class MessageAPI(Resource):
         args = parser.parse_args()
 
         rd_only_mgr_url = urlbook.get_random_live_rd_url(args["consumer_id"])
+        if rd_only_mgr_url is None:
+            return {
+                "status": "Failure",
+                "message": "No read manager available."
+            }, HTTP_400_BAD_REQUEST
 
         try:
             response = requests.get(
@@ -185,6 +190,11 @@ class MessageSizeAPI(Resource):
         args = parser.parse_args()
 
         rd_only_mgr_url = urlbook.get_random_live_rd_url(args["consumer_id"])
+        if rd_only_mgr_url is None:
+            return {
+                "status": "Failure",
+                "message": "No read manager available."
+            }, HTTP_400_BAD_REQUEST
 
         try:
             response = requests.get(

@@ -1,0 +1,5 @@
+REGISTER_PRODUCER="producers"
+REGISTER_CONSUMER="consumers"
+ENQUEUE="messages"
+DEQUEUE="messages"
+SIZE="unread_messages"
