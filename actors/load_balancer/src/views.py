@@ -110,7 +110,7 @@ class MessageAPI(Resource):
         parser.add_argument("consumer_id", type=int, required=True, help="Consumer id required")
         args = parser.parse_args()
 
-        rd_only_mgr_url = urlbook.get_random_live_rd_url()
+        rd_only_mgr_url = urlbook.get_random_live_rd_url(args["consumer_id"])
 
         try:
             response = requests.get(
@@ -184,7 +184,7 @@ class MessageSizeAPI(Resource):
         parser.add_argument("consumer_id", type=int, required=True, help="Consumer id required")
         args = parser.parse_args()
 
-        rd_only_mgr_url = urlbook.get_random_live_rd_url()
+        rd_only_mgr_url = urlbook.get_random_live_rd_url(args["consumer_id"])
 
         try:
             response = requests.get(

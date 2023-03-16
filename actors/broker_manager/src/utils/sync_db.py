@@ -22,9 +22,10 @@ def other_manager_urls():
 
 
 def insert(table, data):
-    print(data)
-    print(type(data))
-    print("In Insert")
+    # print(data)
+    # print(type(data))
+    # print("[DB_SYNC]:: In Insert")
+    
     if "updated_at" in data:
         print(data["updated_at"])
         print(type(data["updated_at"]))
@@ -107,7 +108,7 @@ def sync(operation, table, data):
         tablename = [Topic, Producer, Consumer, Broker, TPLMap, TBPMap]
         operation = [INSERT, UPDATE]
     """
-    print("SYNC CALLED :", operation, "||",table, "|| ",data)
+    print("[DB_SYNC]::", operation, "||",table, "|| ",data)
     if operation == INSERT:
         insert(table, data)
     elif operation == UPDATE:

@@ -16,6 +16,13 @@ class LogMetadataQueue:
         self.lock.release()
         print(f"Log Metadata Queue index: {index}")
         return index
+
+    def insert(self, partition_id, index):
+        self.lock.acquire()
+        while(len(self.queue) <= index):
+            self.queue.append(0)
+        self.queue[index] = partition_id
+        self.lock.release()
     
     def get(self, index):
         return self.queue[index]

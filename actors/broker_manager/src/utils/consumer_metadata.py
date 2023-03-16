@@ -36,6 +36,12 @@ class ConsumerMetaData:
         self.lock.release()
         return index
         
+    def update(self, consumer_id):
+        self.lock.acquire()
+        self.dict[consumer_id] += 1
+        print(f'New consumer id: {self.dict[consumer_id]}')
+        self.lock.release()
+
     def get_and_update(self, consumer_id, limit):
         self.lock.acquire()
         index_read_upto = self.dict[consumer_id]

@@ -23,6 +23,7 @@ from src.http_status_codes import *
 class MasterQueue:
     def __init__(self) -> None:
         self.lock = threading.Lock()
+        self.xlock = threading.Lock()
         self.topics = {} # dict[topic_name: Topic] : Topic class object representing the topic
         self.master_broker = MasterBroker()
         self.last_checkpoint = datetime.min # when a consistent state was achieved 
@@ -123,7 +124,7 @@ class MasterQueue:
         
         logs = TPLMapModel.query.filter(TPLMapModel.updated_at > self.last_checkpoint).order_by(TPLMapModel.log_index).all()
         for log in logs:
-            self.topics[log.topic_name].add_message_index(log.partition_id, log.producer_id)
+            self.topics[log.topic_name].insert_message_index(log.partition_id, log.producer_id, log.log_index)
             present_update_timestamp = max(present_update_timestamp, log.updated_at)
 
         self.last_updated_at = present_update_timestamp
@@ -214,6 +215,8 @@ class MasterQueue:
         
         # send update to the in-memory structure
         message_index = self.topics[topic_name].add_message_index(partition_id, producer_id)
+        
+        print(f"[IN_MEM]:: Added message with idx = {message_index}, topic = {topic_name}, partition = {partition_id}")
         if (message_index < 0):
             # raise Exception("ERROR: producer error.")
             return False
@@ -237,6 +240,7 @@ class MasterQueue:
         if (response.status_code != HTTP_201_CREATED):
             return False
 
+        print(f"[DB_UPD]:: Added message with idx = {message_index}, topic = {topic_name}, partition = {partition_id}")
         # DB update
         tpl_entry = TPLMapModel(
             topic_name=topic_name,
@@ -254,10 +258,11 @@ class MasterQueue:
         # WAL update
         if(not self.has_topic(topic_name)):
             # raise Exception("ERROR: topic does not exists.")
+            print("Topic does not exist")
             return None
         
         # get partition from the in-memory structure
-        index, partition_id = self.topics[topic_name].get_and_update_message_index(consumer_id)
+        index, partition_id = self.topics[topic_name].get_message_index(consumer_id)
         if(index < 0):
             # raise Exception("ERROR: consumer read error")
             print("Indexerror")
@@ -293,9 +298,11 @@ class MasterQueue:
         log_message = response.json().get("log")
 
         print(log_message)
+
+        self.topics[topic_name].update_message_index(consumer_id)
         
         # DB update
-        consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id).first()
+        consumer = ConsumerModel.query.filter_by(consumer_id=consumer_id, topic=topic_name).first()
         consumer.idx_read_upto = index + 1
         db.session.commit()
 
